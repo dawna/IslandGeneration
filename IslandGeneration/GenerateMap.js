@@ -1,7 +1,7 @@
 /// <reference path="Scripts/collections.d.ts" />
 var SCREEN_WIDTH = 2800;
 var SCREEN_HEIGHT = 2800;
-var TILE_LENGTH = 42;
+var TILE_LENGTH = 20;
 var GenerateMap = (function () {
     function GenerateMap(x, y) {
         this.root = new MapNode({ x: x, y: y });
@@ -77,17 +77,33 @@ var MapNode = (function () {
 var Tile = (function () {
     function Tile(pt) {
         this.point = pt;
+        this.edges = new Array();
+        var r = TILE_LENGTH;
+        for (var i = 1; i <= 6; i++) {
+            var angle = Math.PI / 3;
+            var edgeX = pt.x + Math.floor(r * Math.cos(i * angle));
+            var edgeY = pt.y + Math.floor(r * Math.sin(i * angle));
+            this.edges.push({ x: edgeX, y: edgeY });
+        }
     }
     Tile.prototype.setType = function (tileType) {
         this.type = tileType;
     };
     return Tile;
 })();
+var Edge = (function () {
+    function Edge(n1, n2) {
+        this.n1 = n1;
+        this.n2 = n2;
+    }
+    return Edge;
+})();
 var TileType;
 (function (TileType) {
     TileType[TileType["Water"] = 0] = "Water";
     TileType[TileType["Land"] = 1] = "Land";
     TileType[TileType["Shore"] = 2] = "Shore";
+    TileType[TileType["Mountain"] = 3] = "Mountain";
 })(TileType || (TileType = {}));
 var DrawFunctions;
 (function (DrawFunctions) {
@@ -139,11 +155,18 @@ var IslandGenerator = (function () {
         this.perlinGenerator = new Perlin();
         this.ranZ = Math.random();
         this.center = c;
-        this.map = new GenerateMap(1400, 1400);
+        this.tiles = new Array();
+        this.map = new GenerateMap(0, 0);
         this.map.generateMap(PointGenerationFunctions.genHexPoints);
         this.map.applyFunction(this.generateShoreLine.bind(this));
         this.map.applyFunction(this.GenerateShores.bind(this));
-        this.map.applyFunction(this.DrawIsland.bind(this));
+        this.tiles.sort(function (t1, t2) {
+            if (t1.point.y > t2.point.y)
+                return 1;
+            else if (t1.point.y < t2.point.y)
+                return -1;
+            return 0;
+        });
     }
     IslandGenerator.prototype.generateShoreLine = function (node) {
         var tile = node.value;
@@ -151,8 +174,15 @@ var IslandGenerator = (function () {
             tile.setType(TileType.Water);
         }
         else {
-            tile.setType(TileType.Land);
+            var xScale = tile.point.x / SCREEN_WIDTH;
+            var yScale = tile.point.y / SCREEN_HEIGHT;
+            var c = this.perlinGenerator.OctavePerlin(xScale, yScale, this.ranZ, 5, 3);
+            if (c > .6)
+                tile.setType(TileType.Mountain);
+            else
+                tile.setType(TileType.Land);
         }
+        this.tiles.push(tile);
     };
     IslandGenerator.prototype.isLand = function (xPoint, yPoint, ranZ) {
         this.perlinGenerator = new Perlin();
@@ -185,39 +215,57 @@ var IslandGenerator = (function () {
             node.value.type = TileType.Shore;
         }
     };
-    IslandGenerator.prototype.DrawIsland = function (node) {
-        var tile = node.value;
+    return IslandGenerator;
+})();
+function DrawIsland(tiles) {
+    for (var i = 0; i < tiles.length; i++) {
+        var tile = tiles[i];
         var c = document.getElementById("myCanvas");
         var ctx = c.getContext("2d");
-        if (tile.type === TileType.Land) {
+        if (tile.type === TileType.Land || tile.type === TileType.Mountain) {
             ctx.fillStyle = "#2DA82F";
         }
         else if (tile.type === TileType.Water) {
             ctx.fillStyle = "#2D69A8";
         }
-        else {
+        else if (tile.type === TileType.Shore) {
             ctx.fillStyle = "#ffeb99";
         }
         DrawFunctions.drawHexagon(ctx, tile.point.x, tile.point.y, TILE_LENGTH);
-    };
-    return IslandGenerator;
-})();
-var MountainGenerator = (function () {
-    function MountainGenerator() {
-        this.perlinGenerator = new Perlin();
-        this.ranZ = Math.random();
-        this.map = new GenerateMap(1400, 1400);
-        this.map.generateMap(PointGenerationFunctions.genHexPoints);
-        this.map.applyFunction(this.DrawMountains.bind(this));
+        if (tile.type === TileType.Mountain) {
+            ctx.beginPath();
+            var pt1 = tile.edges[5];
+            var pt2 = tile.edges[2];
+            ctx.moveTo(pt1.x, pt1.y);
+            ctx.lineTo(pt2.x, pt2.y);
+            ctx.lineTo((pt1.x + pt2.x) / 2, pt1.y - 50);
+            ctx.lineTo(pt1.x, pt1.y);
+            ctx.closePath();
+            ctx.fillStyle = "#ffffff";
+            ctx.stroke();
+            ctx.fill();
+        }
     }
-    MountainGenerator.prototype.DrawMountains = function (node) {
-        var c = document.getElementById("myCanvas");
-        var ctx = c.getContext("2d");
-        ctx.fillStyle = "#000000";
-        ctx.fillRect(node.point.x - 10, node.point.y - 10, 20, 20);
-    };
-    return MountainGenerator;
-})();
+}
+//class MountainGenerator {
+//    private perlinGenerator: Perlin;
+//    private ranZ: number;
+//    private map: GenerateMap;
+//    constructor() {
+//        this.perlinGenerator = new Perlin();
+//        this.ranZ = Math.random();
+//        this.map = new GenerateMap(1400, 1400);
+//        this.map.generateMap(PointGenerationFunctions.genHexPoints);
+//        this.map.applyFunction(this.DrawMountains.bind(this));
+//    }
+//    DrawMountains(node: MapNode) {
+//        var c = <HTMLCanvasElement>document.getElementById("myCanvas");
+//        var ctx = c.getContext("2d");
+//        ctx.fillStyle = "#000000";
+//        ctx.fillRect(node.point.x - 10, node.point.y - 10, 20, 20);
+//    }
+//}
 var island = new IslandGenerator({ x: 1400, y: 1400 });
-var mountains = new MountainGenerator();
+DrawIsland(island.tiles);
+//var mountains = new MountainGenerator();
 //# sourceMappingURL=GenerateMap.js.map

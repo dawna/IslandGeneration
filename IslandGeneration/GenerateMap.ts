@@ -3,7 +3,7 @@
 var SCREEN_WIDTH = 2800;
 var SCREEN_HEIGHT = 2800;
 
-var TILE_LENGTH = 42;
+var TILE_LENGTH = 20;
 
 class GenerateMap {
     private root: MapNode
@@ -112,8 +112,18 @@ class Tile {
     public point: IPoint;
     public type: TileType;
 
+    public edges: Array<IPoint>;
     constructor(pt: IPoint) {
         this.point = pt;
+        this.edges = new Array<IPoint>();
+
+        var r = TILE_LENGTH;
+        for (var i = 1; i <= 6; i++) {
+            var angle = Math.PI / 3;
+            var edgeX = pt.x + Math.floor(r * Math.cos(i * angle));
+            var edgeY = pt.y + Math.floor(r * Math.sin(i * angle));
+            this.edges.push({x:edgeX, y:edgeY });
+        }
     }
 
     setType(tileType: TileType) {
@@ -121,10 +131,21 @@ class Tile {
     }
 }
 
+class Edge {
+    public n1: MapNode;
+    public n2: MapNode;
+    
+    constructor(n1, n2) {
+        this.n1 = n1;
+        this.n2 = n2;
+    }
+}
+
 enum TileType {
     Water = 0,
     Land = 1,
     Shore = 2,
+    Mountain = 3
 }
 
 module DrawFunctions {
@@ -183,6 +204,8 @@ module PointGenerationFunctions {
 }
 
 class IslandGenerator {
+    public tiles: Array<Tile>;
+
     private perlinGenerator: Perlin;
     private center: IPoint;
     private ranZ: number;
@@ -194,12 +217,19 @@ class IslandGenerator {
         this.ranZ = Math.random();
         this.center = c;
 
-        this.map = new GenerateMap(1400, 1400);
+        this.tiles = new Array<Tile>();
+
+        this.map = new GenerateMap(0, 0);
         this.map.generateMap(PointGenerationFunctions.genHexPoints);
 
         this.map.applyFunction(this.generateShoreLine.bind(this));
         this.map.applyFunction(this.GenerateShores.bind(this));
-        this.map.applyFunction(this.DrawIsland.bind(this));
+
+        this.tiles.sort((t1, t2) => {
+            if (t1.point.y > t2.point.y) return 1;
+            else if (t1.point.y < t2.point.y) return -1
+            return 0;
+        }); 
     }
 
 
@@ -209,8 +239,16 @@ class IslandGenerator {
         if (!this.isLand(tile.point.x, tile.point.y, this.ranZ)) {
             tile.setType(TileType.Water);
         } else {
-            tile.setType(TileType.Land);
+            var xScale = tile.point.x / SCREEN_WIDTH;
+            var yScale = tile.point.y / SCREEN_HEIGHT;
+            var c = this.perlinGenerator.OctavePerlin(xScale, yScale, this.ranZ, 5, 3)
+            if (c > .6)
+                tile.setType(TileType.Mountain);
+            else
+                tile.setType(TileType.Land);
         }  
+
+        this.tiles.push(tile);
 
     }
 
@@ -254,54 +292,75 @@ class IslandGenerator {
 
     }
 
-    DrawIsland (node: MapNode) {
 
-        var tile = <Tile>node.value;
+
+}
+
+function DrawIsland(tiles : Array<Tile>) {
+
+    for (var i = 0; i < tiles.length; i++) {
+        var tile = tiles[i];
 
         var c = <HTMLCanvasElement>document.getElementById("myCanvas");
         var ctx = c.getContext("2d");
 
-        if (tile.type === TileType.Land) {
+        if (tile.type === TileType.Land || tile.type === TileType.Mountain) {
             ctx.fillStyle = "#2DA82F";
         } else if (tile.type === TileType.Water) {
             ctx.fillStyle = "#2D69A8";
-        } else {
+        } else if (tile.type === TileType.Shore) {
             ctx.fillStyle = "#ffeb99";
         }
-
         DrawFunctions.drawHexagon(ctx, tile.point.x, tile.point.y, TILE_LENGTH);
-    }
 
+        if (tile.type === TileType.Mountain) {
+            ctx.beginPath();
+
+            var pt1 = tile.edges[5];
+            var pt2 = tile.edges[2];
+
+            ctx.moveTo(pt1.x, pt1.y);
+            ctx.lineTo(pt2.x, pt2.y);
+            ctx.lineTo((pt1.x + pt2.x) / 2, pt1.y - 50);
+            ctx.lineTo(pt1.x, pt1.y);
+            ctx.closePath();
+            ctx.fillStyle = "#ffffff";
+            ctx.stroke()
+            ctx.fill();
+        }
+    }
 }
 
-class MountainGenerator {
-    private perlinGenerator: Perlin;
-    private ranZ: number;
+//class MountainGenerator {
+//    private perlinGenerator: Perlin;
+//    private ranZ: number;
 
-    private map: GenerateMap;
+//    private map: GenerateMap;
 
-    constructor() {
-        this.perlinGenerator = new Perlin();
-        this.ranZ = Math.random();
+//    constructor() {
+//        this.perlinGenerator = new Perlin();
+//        this.ranZ = Math.random();
 
-        this.map = new GenerateMap(1400, 1400);
-        this.map.generateMap(PointGenerationFunctions.genHexPoints);
-        this.map.applyFunction(this.DrawMountains.bind(this));
-    }
+//        this.map = new GenerateMap(1400, 1400);
+//        this.map.generateMap(PointGenerationFunctions.genHexPoints);
+//        this.map.applyFunction(this.DrawMountains.bind(this));
+//    }
 
-    DrawMountains(node: MapNode) {
+//    DrawMountains(node: MapNode) {
 
-        var c = <HTMLCanvasElement>document.getElementById("myCanvas");
-        var ctx = c.getContext("2d");
-        ctx.fillStyle = "#000000";
+//        var c = <HTMLCanvasElement>document.getElementById("myCanvas");
+//        var ctx = c.getContext("2d");
+//        ctx.fillStyle = "#000000";
 
-        ctx.fillRect(node.point.x - 10, node.point.y - 10, 20, 20);
-    }
+//        ctx.fillRect(node.point.x - 10, node.point.y - 10, 20, 20);
+//    }
 
-}
+//}
 
 var island = new IslandGenerator(<IPoint>{ x: 1400, y: 1400 });
-var mountains = new MountainGenerator();
+
+DrawIsland(island.tiles);
+//var mountains = new MountainGenerator();
 
 
 

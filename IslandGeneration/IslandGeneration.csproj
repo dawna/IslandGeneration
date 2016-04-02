@@ -18,7 +18,6 @@
     <IISExpressUseClassicPipelineMode />
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="app.css" />
     <Content Include="index.html" />
     <Content Include="Scripts\collections.js" />
     <Content Include="web.config" />
@@ -37,7 +36,6 @@
     <TypeScriptCompile Include="PerlinNoise.ts" />
     <TypeScriptCompile Include="Scripts\collections.d.ts" />
     <TypeScriptCompile Include="Scripts\collections.ts" />
-    <TypeScriptCompile Include="SquareIslands.ts" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
