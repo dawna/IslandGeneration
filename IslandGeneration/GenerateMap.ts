@@ -90,7 +90,6 @@ interface IPoint {
     y: number;
 }
 
-//test
 class MapNode {
     public neighbors: Array<MapNode>;
     public point; 
