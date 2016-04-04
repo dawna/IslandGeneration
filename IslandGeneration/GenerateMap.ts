@@ -145,7 +145,10 @@ enum TileType {
     Water = 0,
     Land = 1,
     Shore = 2,
-    Mountain = 3
+    MountainTall = 3,
+    MountainMedium = 4,
+    MountainSmall = 5,
+    Mountain = TileType.MountainMedium || TileType.MountainTall || TileType.MountainSmall
 }
 
 module DrawFunctions {
@@ -219,7 +222,7 @@ class IslandGenerator {
 
         this.tiles = new Array<Tile>();
 
-        this.map = new GenerateMap(0, 0);
+        this.map = new GenerateMap(1400, 1400);
         this.map.generateMap(PointGenerationFunctions.genHexPoints);
 
         this.map.applyFunction(this.generateShoreLine.bind(this));
@@ -243,7 +246,12 @@ class IslandGenerator {
             var yScale = tile.point.y / SCREEN_HEIGHT;
             var c = this.perlinGenerator.OctavePerlin(xScale, yScale, this.ranZ, 5, 3)
             if (c > .6)
-                tile.setType(TileType.Mountain);
+                if (c < .63) 
+                    tile.setType(TileType.MountainSmall);
+                else if (c < .70)
+                    tile.setType(TileType.MountainMedium);
+                else
+                    tile.setType(TileType.MountainTall);
             else
                 tile.setType(TileType.Land);
         }  
@@ -304,58 +312,47 @@ function DrawIsland(tiles : Array<Tile>) {
         var c = <HTMLCanvasElement>document.getElementById("myCanvas");
         var ctx = c.getContext("2d");
 
-        if (tile.type === TileType.Land || tile.type === TileType.Mountain) {
+        if (tile.type === TileType.Land) {
             ctx.fillStyle = "#2DA82F";
         } else if (tile.type === TileType.Water) {
             ctx.fillStyle = "#2D69A8";
         } else if (tile.type === TileType.Shore) {
             ctx.fillStyle = "#ffeb99";
         }
+        if (tile.type === TileType.MountainTall ||
+            tile.type === TileType.MountainMedium ||
+            tile.type === TileType.MountainSmall)
+            ctx.fillStyle = "#767C82";
+
         DrawFunctions.drawHexagon(ctx, tile.point.x, tile.point.y, TILE_LENGTH);
 
-        if (tile.type === TileType.Mountain) {
+        if (tile.type === TileType.MountainTall || 
+            tile.type === TileType.MountainMedium ||
+            tile.type === TileType.MountainSmall) {
+
+            var height = 70;
+            if (tile.type === TileType.MountainTall) height = 150;
+            if (tile.type === TileType.MountainMedium) height = 90;
             ctx.beginPath();
 
             var pt1 = tile.edges[5];
             var pt2 = tile.edges[2];
 
+            var ran = (2*Math.random() - 1) * 20;
+
             ctx.moveTo(pt1.x, pt1.y);
-            ctx.lineTo(pt2.x, pt2.y);
-            ctx.lineTo((pt1.x + pt2.x) / 2, pt1.y - 50);
+
+            ctx.quadraticCurveTo((pt1.x + pt2.x) / 2 + ran, pt1.y - height, pt2.x, pt2.y);
+            ctx.stroke()
             ctx.lineTo(pt1.x, pt1.y);
             ctx.closePath();
-            ctx.fillStyle = "#ffffff";
-            ctx.stroke()
+            ctx.fillStyle = "#767C82";
+            
             ctx.fill();
         }
     }
 }
 
-//class MountainGenerator {
-//    private perlinGenerator: Perlin;
-//    private ranZ: number;
-
-//    private map: GenerateMap;
-
-//    constructor() {
-//        this.perlinGenerator = new Perlin();
-//        this.ranZ = Math.random();
-
-//        this.map = new GenerateMap(1400, 1400);
-//        this.map.generateMap(PointGenerationFunctions.genHexPoints);
-//        this.map.applyFunction(this.DrawMountains.bind(this));
-//    }
-
-//    DrawMountains(node: MapNode) {
-
-//        var c = <HTMLCanvasElement>document.getElementById("myCanvas");
-//        var ctx = c.getContext("2d");
-//        ctx.fillStyle = "#000000";
-
-//        ctx.fillRect(node.point.x - 10, node.point.y - 10, 20, 20);
-//    }
-
-//}
 
 var island = new IslandGenerator(<IPoint>{ x: 1400, y: 1400 });
 
