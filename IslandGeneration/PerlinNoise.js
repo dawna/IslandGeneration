@@ -46,8 +46,12 @@ var Perlin = (function () {
         bab = Perlin.p[Perlin.p[Perlin.p[this.inc(xi)] + yi] + this.inc(zi)];
         bbb = Perlin.p[Perlin.p[Perlin.p[this.inc(xi)] + this.inc(yi)] + this.inc(zi)];
         var x1, x2, y1, y2;
-        x1 = Perlin.lerp(Perlin.grad(aaa, xf, yf, zf), Perlin.grad(baa, xf - 1, yf, zf), u); // surrounding points in its unit cube.
-        x2 = Perlin.lerp(Perlin.grad(aba, xf, yf - 1, zf), Perlin.grad(bba, xf - 1, yf - 1, zf), u);
+        x1 = Perlin.lerp(Perlin.grad(aaa, xf, yf, zf), // The gradient function calculates the dot product between a pseudorandom
+        Perlin.grad(baa, xf - 1, yf, zf), // gradient vector and the vector from the input coordinate to the 8
+        u); // surrounding points in its unit cube.
+        x2 = Perlin.lerp(Perlin.grad(aba, xf, yf - 1, zf), // This is all then lerped together as a sort of weighted average based on the faded (u,v,w)
+        Perlin.grad(bba, xf - 1, yf - 1, zf), // values we made earlier.
+        u);
         y1 = Perlin.lerp(x1, x2, v);
         x1 = Perlin.lerp(Perlin.grad(aab, xf, yf, zf - 1), Perlin.grad(bab, xf - 1, yf, zf - 1), u);
         x2 = Perlin.lerp(Perlin.grad(abb, xf, yf - 1, zf - 1), Perlin.grad(bbb, xf - 1, yf - 1, zf - 1), u);

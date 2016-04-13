@@ -33,6 +33,7 @@
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="GenerateMap.ts" />
+    <TypeScriptCompile Include="MockTest.ts" />
     <TypeScriptCompile Include="PerlinNoise.ts" />
     <TypeScriptCompile Include="Scripts\collections.d.ts" />
     <TypeScriptCompile Include="Scripts\collections.ts" />

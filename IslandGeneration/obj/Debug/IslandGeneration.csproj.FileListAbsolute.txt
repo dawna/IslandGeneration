@@ -4,3 +4,9 @@ C:\Users\cyg_server\documents\visual studio 2013\Projects\IslandGeneration\Islan
 C:\Users\cyg_server\documents\visual studio 2013\Projects\IslandGeneration\IslandGeneration\obj\Debug\IslandGeneration.dll
 C:\Users\cyg_server\documents\visual studio 2013\Projects\IslandGeneration\IslandGeneration\obj\Debug\IslandGeneration.pdb
 C:\Users\cyg_server\documents\visual studio 2013\Projects\IslandGeneration\IslandGeneration\obj\Debug\IslandGeneration.csprojResolveAssemblyReference.cache
+C:\Users\AdamD\Source\IslandGeneration\IslandGeneration\bin\IslandGeneration.dll.config
+C:\Users\AdamD\Source\IslandGeneration\IslandGeneration\bin\IslandGeneration.dll
+C:\Users\AdamD\Source\IslandGeneration\IslandGeneration\bin\IslandGeneration.pdb
+C:\Users\AdamD\Source\IslandGeneration\IslandGeneration\obj\Debug\IslandGeneration.csprojResolveAssemblyReference.cache
+C:\Users\AdamD\Source\IslandGeneration\IslandGeneration\obj\Debug\IslandGeneration.dll
+C:\Users\AdamD\Source\IslandGeneration\IslandGeneration\obj\Debug\IslandGeneration.pdb
