@@ -106,7 +106,6 @@ var TileType;
     TileType[TileType["MountainTall"] = 3] = "MountainTall";
     TileType[TileType["MountainMedium"] = 4] = "MountainMedium";
     TileType[TileType["MountainSmall"] = 5] = "MountainSmall";
-    TileType[TileType["Mountain"] = TileType.MountainMedium || TileType.MountainTall || TileType.MountainSmall] = "Mountain";
 })(TileType || (TileType = {}));
 var DrawFunctions;
 (function (DrawFunctions) {
@@ -266,7 +265,7 @@ function DrawIsland(tiles) {
         }
     }
 }
-var island = new IslandGenerator({ x: 1400, y: 1400 });
-DrawIsland(island.tiles);
+//var island = new IslandGenerator(<IPoint>{ x: 1400, y: 1400 });
+//DrawIsland(island.tiles);
 //var mountains = new MountainGenerator();
 //# sourceMappingURL=GenerateMap.js.map

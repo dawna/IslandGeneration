@@ -148,7 +148,6 @@ enum TileType {
     MountainTall = 3,
     MountainMedium = 4,
     MountainSmall = 5,
-    Mountain = TileType.MountainMedium || TileType.MountainTall || TileType.MountainSmall
 }
 
 module DrawFunctions {
@@ -354,9 +353,9 @@ function DrawIsland(tiles : Array<Tile>) {
 }
 
 
-var island = new IslandGenerator(<IPoint>{ x: 1400, y: 1400 });
+//var island = new IslandGenerator(<IPoint>{ x: 1400, y: 1400 });
 
-DrawIsland(island.tiles);
+//DrawIsland(island.tiles);
 //var mountains = new MountainGenerator();
 
 
