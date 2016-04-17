@@ -7,9 +7,14 @@ var TILE_LENGTH = 20;
 
 module Test {
 
-    interface Edge {
-        p1: Point;
-        p2: Point; //polygon instead of pts - also corners
+    class Edge {
+        corner1: Corner;
+        corner2: Corner; //polygon instead of pts - also corners
+
+        tiles: Array<Tile>;
+
+        constructor() {
+        }
     }
 
     enum TileType {
@@ -43,13 +48,13 @@ module Test {
             this.edges = edges;
         }
 
-        public getSharedEdge(tile: Tile) {
-            for (var i = 0; i < this.edges.length; i++) {
-                if (Lines.doIntersect(this.edges[i].p1, this.edges[i].p2, tile.center, this.center)) {
-                    return this.edges[i];
-                }
-            }
-        }
+        //public getSharedEdge(tile: Tile) {
+        //    for (var i = 0; i < this.edges.length; i++) {
+        //        if (Lines.doIntersect(this.edges[i].p1, this.edges[i].p2, tile.center, this.center)) {
+        //            return this.edges[i];
+        //        }
+        //    }
+        //}
 
         toString() {
             return this.center.x + "," + this.center.y;
@@ -63,10 +68,24 @@ module Test {
 
     }
 
-    interface Corner {
+    class Corner {
         corners: Array<Corner>; 
         edges: Array<Edge>;
         point: Point;
+
+        constructor() {
+        }
+
+        public equals(corner: Corner) {
+            return corner.point.x == this.point.x && corner.point.y == this.point.y;
+        }
+
+        public merge(corner: Corner) {
+        }
+
+        public toString() {
+            return this.point.x + "," + this.point.y;
+        }
     }
 
 
@@ -85,7 +104,7 @@ module Test {
             this.shoreLine = new Array<Edge>();
         }
 
-        GenerateMap(generateTilesFunction: (tile: Tile) => Array<Tile>, generateCornerFunction: (point:Point) => Array<Corner>) {
+        GenerateMap(generateTilesFunction: (tile: Tile) => Array<Tile>, generatePointFunction: (point:Point) => Array<Point>) {
             var queue = new collections.Queue<Tile>();
             var tilesDictionary = new collections.Dictionary<string, Tile>();
             var cornerDictionary = new collections.Dictionary<string, Corner>();
@@ -98,29 +117,31 @@ module Test {
                 var tile = queue.dequeue();
                 this.tiles.push(tile);
 
-                var corners = generateCornerFunction(tile.center);
+                //Gets points and creates the corners.
+                var pts = generatePointFunction(tile.center);
+
+                //Generates the corners form the point function.
+                var corners = this.GenerateCornersFromPoints(pts);
+
 
                 corners.forEach(corner => {
                     //set corner neighbors and edges.
                     var getCorner = cornerDictionary.getValue(corner.toString());
+                    //Corner doesn't currently exist.
                     if (typeof getCorner === 'undefined') {
                         cornerDictionary.setValue(corner.toString(), corner);
+                        //corner.edges.forEach(edge => { edge } //Set the tile to current one
                     } else {
-                        getCorner.corners.forEach(newCorner => {
-                            if (typeof cornerDictionary.getValue(newCorner.toString()) === 'undefined') {
-                                //add new corner to dictionary too.
-                                //add new corner to getCorner.
-                            }
-                        });
+                        //Corner currently exists.
+
+                        //Merges the content of corner into the dictionary's value.
+                        getCorner.merge(corner);
                     }
                 });
-                //add corner to dictionary
-
 
                 //for generating neighbor centers.
                 var neighbors = generateTilesFunction(tile);
 
-                //This is where the edges and corners need to be created(no not until it becomes tile).
                 neighbors.forEach(n => {
                     if (!this.OutOfBounds(n)) {
                         var getNeighbor = tilesDictionary.getValue(n.toString());
@@ -139,6 +160,46 @@ module Test {
 
                 //Calculate edge tile neighbors.
             }
+        }
+
+        GenerateCornersFromPoints(pts: Array<Point>) {
+            var corners = new Array<Corner>();
+
+            for (var i = 0; i < pts.length; i++) {
+
+                var newCorner = new Corner();
+                newCorner.point = pts[i];
+                corners.push(newCorner);
+            }
+
+            for (var i = 0; i < corners.length; i++) {
+                var adjCorner1;
+                var adjCorner2;
+
+                //If end of the array.
+                if (i == corners.length - 1) {
+                    adjCorner1 = corners[i - 1];
+                    adjCorner2 = corners[0];
+                }
+                //If beginning of the array.
+                else if (i == 0) {
+                    adjCorner1 = corners[corners.length - 1];
+                    adjCorner2 = corners[i + 1];
+                }
+                //In the middle.
+                else {
+                    adjCorner1 = corners[i - 1];
+                    adjCorner2 = corners[i + 1];
+                }
+
+                corners[i].corners.push(adjCorner1);
+                corners[i].corners.push(adjCorner2);
+
+                var edge = <Edge>{ corner1: adjCorner1, corner2: adjCorner2 };
+                corners[i].edges.push(edge);
+            }
+
+            return corners;
         }
 
         OutOfBounds(tile: Tile): boolean {
@@ -172,42 +233,6 @@ module Test {
                     }
                 };
             });
-
-
-
-            //Ugly - remove when a better solution shows up.
-            //this.shoreTiles.forEach(tile => {
-
-            var queue = new collections.Queue<Tile>();
-            queue.enqueue(this.shoreTiles[0]);
-
-            var tilesDictionary = new collections.Dictionary<string, Tile>();
-
-            tilesDictionary.setValue(this.shoreTiles[0].toString(), this.shoreTiles[0]);
-            while (queue.size() !== 0) {
-                var tile = queue.dequeue();
-                for (var i = 0; i < tile.neighbors.length; i++) {
-
-                    if (tile.neighbors[i].tileType === TileType.Water) {
-                        this.shoreLine.push(tile.getSharedEdge(tile.neighbors[i]));
-                    }
-
-                    if (tile.neighbors[i].tileType === TileType.Shore) {
-                        var getNeighbor = tilesDictionary.getValue(tile.neighbors[i].toString());
-                        if (typeof getNeighbor === 'undefined') {
-                            if (tile.neighbors[i].toString() !== this.shoreTiles[0].toString()) {
-                                tilesDictionary.setValue(tile.neighbors[i].toString(), tile.neighbors[i]);
-                                queue.enqueue(tile.neighbors[i]);
-                            }
-                        }
-                    }
-                }
-            }
-            //});
-
-            //this.tiles.forEach(tile => {
-            //    this.DrawTile(tile);
-            //});
 
             this.DrawLand();
         }
@@ -310,38 +335,27 @@ module Test {
                 neighbors.push(new Tile(p));
             });
 
-            tile.edges = generateHexEdges(tile.center);
-            //neighbors.forEach(neighbor => {
-
-
-
-            //});
-
             return neighbors;
         }
 
         function intersects() {
         }
 
-        function generateHexEdges(pt : Point) {
+        function generateHexPoints(pt : Point) {
 
-            var edges = new Array<Edge>();
+            var points = new Array<Point>();
 
             var r = TILE_LENGTH;
-            for (var i = 0; i <= 5; i++) {
+            for (var i = 0; i <= 6; i++) {
                 var angle = Math.PI / 3;
                 var edgeX = pt.x + Math.floor(r * Math.cos(i * angle));
                 var edgeY = pt.y + Math.floor(r * Math.sin(i * angle));
                 var v1 = { x: edgeX, y: edgeY };
 
-                var edgeX2 = pt.x + Math.floor(r * Math.cos((i + 1) * angle));
-                var edgeY2 = pt.y + Math.floor(r * Math.sin((i + 1) * angle));
-                var v2 = { x: edgeX2, y: edgeY2 };
-
-                edges.push({ p1: v1, p2: v2 });
+                points.push(v1);
             }
 
-            return edges;
+            return points;
         }
 
         function generateHexNeighborCenters(pt: IPoint) {
