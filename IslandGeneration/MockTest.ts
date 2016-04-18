@@ -16,6 +16,11 @@ module Test {
         constructor() {
             this.tiles = new Array<Tile>();
         }
+
+        public equals(edge: Edge) {
+            return this.corner1.equals(edge.corner1) && this.corner2.equals(edge.corner2);
+            //Or vice-versa
+        }
     }
 
     enum TileType {
@@ -48,14 +53,6 @@ module Test {
             this.tileType = tileType;
         }
 
-        //public getSharedEdge(tile: Tile) {
-        //    for (var i = 0; i < this.edges.length; i++) {
-        //        if (Lines.doIntersect(this.edges[i].p1, this.edges[i].p2, tile.center, this.center)) {
-        //            return this.edges[i];
-        //        }
-        //    }
-        //}
-
         toString() {
             return this.center.x + "," + this.center.y;
         }
@@ -80,6 +77,28 @@ module Test {
 
         public equals(corner: Corner) {
             return corner.point.x == this.point.x && corner.point.y == this.point.y;
+        }
+
+        addCorner(val: Corner) {
+            if (this.equals(val)) {
+                return;
+            }
+
+            var alreadyExists = false;
+            this.corners.forEach(c => {
+                if (c.point.x === val.point.x && c.point.y === val.point.y) {
+                    alreadyExists = true;
+                }
+            });
+
+            if (!alreadyExists) {
+                this.corners.push(val);
+                var newEdge = new Edge();
+                newEdge.corner1 = this;
+                newEdge.corner2 = val;
+                this.edges.push(newEdge);
+            }
+
         }
 
         public merge(corner: Corner) {
@@ -123,39 +142,17 @@ module Test {
                 var pts = generatePointFunction(tile.center);
 
                 //Generates the corners form the point function.
-                var corners = this.GenerateCornersFromPoints(pts);
+                var corners = this.GenerateCornersFromPoints(cornerDictionary, pts);
 
 
                 corners.forEach(corner => {
+
                     //set corner neighbors and edges.
-
                     corner.edges.forEach(e => e.tiles.push(tile));
-                    var getCorner = cornerDictionary.getValue(corner.toString());
+                    tile.corners.push(corner);
 
-                    //Corner doesn't currently exist.
-                    if (typeof getCorner === 'undefined') {
-                        cornerDictionary.setValue(corner.toString(), corner);
-                        tile.corners.push(corner);
-                        //corner.edges.forEach(edge => { edge } //Set the tile to current one
-                    } else {
-                        //Corner currently exists.
-                        //Merges the content of corner into the dictionary's value.
-                        //getCorner.merge(corner);
+                    cornerDictionary.setValue(corner.toString(), corner);
 
-                        //Actually.. maybe if a corner exists already but this tile hasn't been created then we can assume that it doesn't have the same corners that it is connected to.
-                        corner.corners.forEach(c => {
-                            getCorner.corners.push(c);
-                        });
-
-                        getCorner.edges.forEach(e => e.tiles.push(tile));
-
-                        corner.edges.forEach(e => {
-                            getCorner.edges.push(e);
-                        });
-
-                        tile.corners.push(getCorner);
-
-                    }
                 });
 
                 //for generating neighbor centers.
@@ -181,13 +178,20 @@ module Test {
             }
         }
 
-        GenerateCornersFromPoints(pts: Array<Point>) {
+        GenerateCornersFromPoints(cornerDictionary: collections.Dictionary<string, Corner>, pts: Array<Point>) {
             var corners = new Array<Corner>();
 
             for (var i = 0; i < pts.length; i++) {
 
                 var newCorner = new Corner();
                 newCorner.point = pts[i];
+
+                //I should do this here.
+                var getCorner = cornerDictionary.getValue(newCorner.toString());
+                if (typeof getCorner !== 'undefined') {
+                    newCorner = getCorner;
+                }
+
                 corners.push(newCorner);
             }
 
@@ -211,19 +215,9 @@ module Test {
                     adjCorner2 = corners[i + 1];
                 }
 
-                corners[i].corners.push(adjCorner1);
-                corners[i].corners.push(adjCorner2);
+                corners[i].addCorner(adjCorner1);
+                corners[i].addCorner(adjCorner2);
 
-                var edge1 = new Edge();
-                edge1.corner1 = corners[i];
-                edge1.corner2 = adjCorner1;
-
-                var edge2 = new Edge();
-                edge2.corner1 = corners[i];
-                edge2.corner2 = adjCorner2;
-            
-                corners[i].edges.push(edge1);
-                corners[i].edges.push(edge2);
             }
 
             return corners;
@@ -261,15 +255,46 @@ module Test {
                 };
             });
 
+            //Gets the initial shore-line.
             this.shoreTiles[0].corners.forEach(c => {
                 c.edges.forEach(e => {
                     e.tiles.forEach(t => {
                         if (t.tileType === TileType.Water) {
                             this.shoreLine.push(e);
+                            return;
                         }
                     });
+
+                    if (this.shoreLine.length > 0) return;
                 });
+                if (this.shoreLine.length > 0) return;
             });
+
+
+            //Loops through the entire shore-line.
+            var startValue = this.shoreLine[0].corner1;
+            var nextValue = this.shoreLine[0].corner2;
+            var prevVal = this.shoreLine[0];
+
+            while (!nextValue.equals(startValue)) {
+                var nextEdge : Edge;
+                nextValue.edges.forEach(e => {
+                    var landCount = 0;
+                    var waterCount = 0;
+                    e.tiles.forEach(t => {
+                        if (t.tileType === TileType.Water) waterCount++
+                        else landCount++;
+                    });
+                    if (landCount == 1 && waterCount == 1) {
+                        if (!e.equals(prevVal)) {
+                            nextEdge = e;
+                        }
+                    }
+                });
+
+                prevVal = nextEdge;
+                nextValue = nextEdge.corner2;
+            }
 
             this.DrawLand();
         }
