@@ -14,6 +14,7 @@ module Test {
         tiles: Array<Tile>;
 
         constructor() {
+            this.tiles = new Array<Tile>();
         }
     }
 
@@ -28,12 +29,15 @@ module Test {
 
     class Tile {
         neighbors: Array<Tile>;
-        center: Point;
+        corners: Array<Corner>;
         edges: Array<Edge>;
+
+        center: Point;
         tileType: TileType;
 
         constructor(center : Point) {
             this.neighbors = new Array<Tile>();
+            this.corners = new Array<Corner>();
             this.edges = new Array<Edge>();
 
             this.center = center;
@@ -42,10 +46,6 @@ module Test {
 
         public setType(tileType: TileType) {
             this.tileType = tileType;
-        }
-        
-        public SetEdges(edges: Array<Edge>) {
-            this.edges = edges;
         }
 
         //public getSharedEdge(tile: Tile) {
@@ -74,6 +74,8 @@ module Test {
         point: Point;
 
         constructor() {
+            this.corners = new Array<Corner>(); 
+            this.edges = new Array<Edge>();
         }
 
         public equals(corner: Corner) {
@@ -126,16 +128,33 @@ module Test {
 
                 corners.forEach(corner => {
                     //set corner neighbors and edges.
+
+                    corner.edges.forEach(e => e.tiles.push(tile));
                     var getCorner = cornerDictionary.getValue(corner.toString());
+
                     //Corner doesn't currently exist.
                     if (typeof getCorner === 'undefined') {
                         cornerDictionary.setValue(corner.toString(), corner);
+                        tile.corners.push(corner);
                         //corner.edges.forEach(edge => { edge } //Set the tile to current one
                     } else {
                         //Corner currently exists.
-
                         //Merges the content of corner into the dictionary's value.
-                        getCorner.merge(corner);
+                        //getCorner.merge(corner);
+
+                        //Actually.. maybe if a corner exists already but this tile hasn't been created then we can assume that it doesn't have the same corners that it is connected to.
+                        corner.corners.forEach(c => {
+                            getCorner.corners.push(c);
+                        });
+
+                        getCorner.edges.forEach(e => e.tiles.push(tile));
+
+                        corner.edges.forEach(e => {
+                            getCorner.edges.push(e);
+                        });
+
+                        tile.corners.push(getCorner);
+
                     }
                 });
 
@@ -195,8 +214,16 @@ module Test {
                 corners[i].corners.push(adjCorner1);
                 corners[i].corners.push(adjCorner2);
 
-                var edge = <Edge>{ corner1: adjCorner1, corner2: adjCorner2 };
-                corners[i].edges.push(edge);
+                var edge1 = new Edge();
+                edge1.corner1 = corners[i];
+                edge1.corner2 = adjCorner1;
+
+                var edge2 = new Edge();
+                edge2.corner1 = corners[i];
+                edge2.corner2 = adjCorner2;
+            
+                corners[i].edges.push(edge1);
+                corners[i].edges.push(edge2);
             }
 
             return corners;
@@ -234,6 +261,16 @@ module Test {
                 };
             });
 
+            this.shoreTiles[0].corners.forEach(c => {
+                c.edges.forEach(e => {
+                    e.tiles.forEach(t => {
+                        if (t.tileType === TileType.Water) {
+                            this.shoreLine.push(e);
+                        }
+                    });
+                });
+            });
+
             this.DrawLand();
         }
 
@@ -268,20 +305,20 @@ module Test {
 
             
 
-            for (var i = 0; i < this.shoreLine.length; i++) {
+            //for (var i = 0; i < this.shoreLine.length; i++) {
 
-                ctx.beginPath();
-                ctx.save();
-                ctx.translate(0, 0);
-                ctx.rotate(0);
-                ctx.moveTo(this.shoreLine[i].p1.x, this.shoreLine[i].p1.y);
-                ctx.lineTo(this.shoreLine[i].p2.x, this.shoreLine[i].p2.y);
-                ctx.closePath();
-                ctx.restore();
+            //    ctx.beginPath();
+            //    ctx.save();
+            //    ctx.translate(0, 0);
+            //    ctx.rotate(0);
+            //    ctx.moveTo(this.shoreLine[i].p1.x, this.shoreLine[i].p1.y);
+            //    ctx.lineTo(this.shoreLine[i].p2.x, this.shoreLine[i].p2.y);
+            //    ctx.closePath();
+            //    ctx.restore();
 
-                ctx.stroke()
+            //    ctx.stroke()
 
-            }
+            //}
             //ctx.lineTo(this.shoreLine[0].p1.x, this.shoreLine[0].p1.y);
 
 
@@ -289,36 +326,36 @@ module Test {
         }
         DrawTile(tile: Tile) {
 
-            var c = <HTMLCanvasElement>document.getElementById("myCanvas");
-            var ctx = c.getContext("2d");
+            //var c = <HTMLCanvasElement>document.getElementById("myCanvas");
+            //var ctx = c.getContext("2d");
 
-            if (tile.tileType === TileType.Land) {
-                ctx.fillStyle = "#2DA82F";
-            } else if (tile.tileType === TileType.Water) {
-                ctx.fillStyle = "#2D69A8";
-            } else if (tile.tileType == TileType.Shore) {
-                ctx.fillStyle = "#FFFFFF";
-            }
+            //if (tile.tileType === TileType.Land) {
+            //    ctx.fillStyle = "#2DA82F";
+            //} else if (tile.tileType === TileType.Water) {
+            //    ctx.fillStyle = "#2D69A8";
+            //} else if (tile.tileType == TileType.Shore) {
+            //    ctx.fillStyle = "#FFFFFF";
+            //}
 
-            ctx.beginPath();
-            ctx.save();
-            ctx.translate(0, 0);
-            ctx.rotate(0);
-            ctx.moveTo(tile.edges[0].p1.x, tile.edges[0].p1.y);
+            //ctx.beginPath();
+            //ctx.save();
+            //ctx.translate(0, 0);
+            //ctx.rotate(0);
+            //ctx.moveTo(tile.edges[0].p1.x, tile.edges[0].p1.y);
 
-            for (var i = 0; i < tile.edges.length; i++) {
+            //for (var i = 0; i < tile.edges.length; i++) {
 
-                ctx.lineTo(tile.edges[i].p2.x, tile.edges[i].p2.y);
+            //    ctx.lineTo(tile.edges[i].p2.x, tile.edges[i].p2.y);
 
 
-            }
-            ctx.lineTo(tile.edges[0].p1.x, tile.edges[0].p1.y);
+            //}
+            //ctx.lineTo(tile.edges[0].p1.x, tile.edges[0].p1.y);
 
-            ctx.closePath();
-            ctx.restore();
+            //ctx.closePath();
+            //ctx.restore();
 
-            ctx.stroke()
-            ctx.fill();
+            //ctx.stroke()
+            //ctx.fill();
             //DrawFunctions.drawHexagon(ctx, tile.center.x, tile.center.y, TILE_LENGTH);
         }
     }
@@ -341,12 +378,12 @@ module Test {
         function intersects() {
         }
 
-        function generateHexPoints(pt : Point) {
+        export function generateHexPoints(pt : Point) {
 
             var points = new Array<Point>();
 
             var r = TILE_LENGTH;
-            for (var i = 0; i <= 6; i++) {
+            for (var i = 0; i <= 5; i++) {
                 var angle = Math.PI / 3;
                 var edgeX = pt.x + Math.floor(r * Math.cos(i * angle));
                 var edgeY = pt.y + Math.floor(r * Math.sin(i * angle));
@@ -463,6 +500,6 @@ module Test {
 
 
 var world = new Test.World();
-world.GenerateMap(Test.HexTile.generationFunction);
+world.GenerateMap(Test.HexTile.generationFunction, Test.HexTile.generateHexPoints);
 world.GenerateIslands();
 
