@@ -19,7 +19,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="index.html" />
-    <Content Include="Scripts\collections.js" />
     <Content Include="Scripts\rhill-voronoi-core.js" />
     <Content Include="Scripts\rhill-voronoi-core.min.js" />
     <Content Include="web.config" />
@@ -39,6 +38,7 @@
     <TypeScriptCompile Include="PerlinNoise.ts" />
     <TypeScriptCompile Include="Scripts\collections.d.ts" />
     <TypeScriptCompile Include="Scripts\collections.ts" />
+    <TypeScriptCompile Include="Scripts\rhill-voronoi-core.d.ts" />
     <TypeScriptCompile Include="VoronoiGenerationTest.ts" />
   </ItemGroup>
   <PropertyGroup>
