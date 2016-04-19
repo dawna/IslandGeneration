@@ -54,10 +54,10 @@ function generateHexagon(size: number, seed: number): Function {
     }
 }
 
-var pts = generateHexagon(100, 0);
+var pts = generateHexagon(1000, 0);
 var voronoi = new Voronoi();
-var bbox = { xl: 0, xr: 800, yt: 0, yb: 600 }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
+var bbox = { xl: -100, xr: 800, yt: -100, yb: 600 }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
 var sites = [{ x: 200, y: 200 }, { x: 50, y: 250 }, { x: 1000, y: 100 } /* , ... */];
 
-var diagram = voronoi.compute(sites, bbox);
+var diagram = voronoi.compute(pts(1000), bbox);
 render();
