@@ -37,6 +37,7 @@
     <TypeScriptCompile Include="PerlinNoise.ts" />
     <TypeScriptCompile Include="Scripts\collections.d.ts" />
     <TypeScriptCompile Include="Scripts\collections.ts" />
+    <TypeScriptCompile Include="VoronoiGenerationTest.ts" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>

@@ -144,12 +144,11 @@ module Test {
                 //Generates the corners form the point function.
                 var corners = this.GenerateCornersFromPoints(cornerDictionary, pts);
 
-
                 corners.forEach(corner => {
 
                     //set corner neighbors and edges.
-                    corner.edges.forEach(e => e.tiles.push(tile));
                     tile.corners.push(corner);
+                    corner.edges.forEach(e => e.tiles.push(tile));
 
                     cornerDictionary.setValue(corner.toString(), corner);
 
@@ -166,7 +165,6 @@ module Test {
                             tilesDictionary.setValue(n.toString(), n);
                             tile.neighbors.push(n);
                             queue.enqueue(n);
-
 
                         } else {
                             tile.neighbors.push(getNeighbor);
