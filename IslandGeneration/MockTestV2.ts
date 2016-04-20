@@ -1,13 +1,20 @@
-﻿module Test2 {
+﻿/// <reference path="Scripts/rhill-voronoi-core.d.ts" />
+
+var SCREEN_WIDTH = 2800;
+var SCREEN_HEIGHT = 2800;
+
+var TILE_LENGTH = 20;
+
+declare var Voronoi: any;
+var voronoi = new Voronoi();
+
+module Test2 {
     class Edge {
-        corner1: Corner;
-        corner2: Corner; //polygon instead of pts - also corners
+        corner1: Point;
+        corner2: Point; //polygon instead of pts - also corners
 
-        tiles: Array<Tile>;
-
-        constructor() {
-            this.tiles = new Array<Tile>();
-        }
+        tile1: Tile;
+        tile2: Tile;
     }
 
     enum TileType {
@@ -23,7 +30,6 @@
         neighbors: Array<Tile>;
         corners: Array<Corner>;
         edges: Array<Edge>;
-
         center: Point;
         tileType: TileType;
 
@@ -61,8 +67,8 @@
     }
 
     interface Point {
-        x: number,
-        y: number
+        x: number;
+        y: number;
 
     }
 
@@ -84,6 +90,8 @@
 
         InitializeMap(generatePointFunction: (point: Point) => Array<Point>) {
             var pointDictionary = new collections.Dictionary<string, Point>();
+            var tileDictionary = new collections.Dictionary<number, Tile>();
+
             var queue = new collections.Queue<Point>();
             queue.enqueue(this.initialLocation);
 
@@ -95,67 +103,107 @@
                 pts.forEach(p => {
                     var getPt = pointDictionary.getValue(p.x + "," + p.y);
 
-                    if (typeof getPt !== 'undefined') {
-
-                    }
-                });
-            }
-
-            var sites = pointDictionary.values;
-
-            var diagram;
-            var cells : Array<any>;
-            var edges: Array<any>;
-            var verts: Array<any>;
-            
-            //need to keep track of neighboring cells.. otherwise this is fine.
-            //tile could contain cell data.
-            //Could create neighbors by going through each edge.  each one should have one lSite and one rSite.
-            //Otherwise I could create that relationship above.
-
-
-        }
-
-        //None of this will be needed.
-        GenerateMap(generateTilesFunction: (tile: Tile) => Array<Tile>) {
-            var queue = new collections.Queue<Tile>();
-            var tilesDictionary = new collections.Dictionary<string, Tile>();
-            var cornerDictionary = new collections.Dictionary<string, Corner>();
-
-            var root = new Tile(this.initialLocation);
-
-            queue.enqueue(root);
-            while (queue.size() !== 0) {
-
-                var tile = queue.dequeue();
-                this.tiles.push(tile);
-
-
-
-                //for generating neighbor centers.
-                var neighbors = generateTilesFunction(tile);
-
-                neighbors.forEach(n => {
-                    if (!this.OutOfBounds(n)) {
-                        var getNeighbor = tilesDictionary.getValue(n.toString());
-                        if (typeof getNeighbor === 'undefined') {
-                            //Adds node to dictionary.
-                            tilesDictionary.setValue(n.toString(), n);
-                            tile.neighbors.push(n);
-                            queue.enqueue(n);
-
-                        } else {
-                            tile.neighbors.push(getNeighbor);
+                    if (typeof getPt === 'undefined') {
+                        if (!this.OutOfBounds(p)) {
+                            pointDictionary.setValue(p.x + "," + p.y, p);
+                            queue.enqueue(p);
                         }
                     }
                 });
-
-                //Calculate edge tile neighbors.
             }
+
+            var sites = pointDictionary.values();
+            var bbox = { xl: 0, xr: SCREEN_WIDTH, yt: 0, yb: SCREEN_HEIGHT }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
+            var diagram = voronoi.compute(sites, bbox);
+            var cells : Array<any> = diagram.cells;
+
+            cells.forEach(cell => {
+
+                var newTile = tileDictionary.getValue(cell.voronoiId);
+                if (typeof newTile === 'undefined') {
+                    var center = <Point>{ x: cell.site.x, y: cell.site.y };
+                    newTile = new Tile(center); //Create tile from cell
+                }
+
+                cell.halfedges.forEach(halfEdge => {
+
+                    var edge = halfEdge.edge;
+
+                    var newEdge = new Edge();
+                    newEdge.corner1 = edge.va;
+                    newEdge.corner2 = edge.vb;
+
+                    //Neighbors - looks wrong.
+                    var neighbor1 = edge.lSite;
+                    var neighbor2 = edge.rSite;
+
+                    var newNeighbor = neighbor1;
+
+                    if (newNeighbor.voronoiId == cell.site.voronoiId) {
+                        newNeighbor = neighbor2;
+                    }
+
+                    if (newNeighbor != null) {
+                        var getNeighbor = tileDictionary.getValue(newNeighbor.voronoiId);
+
+                        if (typeof getNeighbor !== 'undefined') {
+                            newTile.neighbors.push(getNeighbor);
+                        } else {
+                            var center = <Point>{ x: newNeighbor.x, y: newNeighbor.y };
+                            getNeighbor = new Tile(center);
+                            tileDictionary.setValue(newNeighbor.voronoiId, getNeighbor);
+                            newTile.neighbors.push(getNeighbor);
+                        }
+                        newEdge.tile1 = getNeighbor;
+
+                    } else {
+                        alert("TEST");
+                    }
+
+
+                    newEdge.tile2 = newTile;
+
+                    newTile.edges.push(newEdge);
+                });
+                tileDictionary.setValue(cell.site.voronoiId, newTile);
+            });
+
+            this.tiles = tileDictionary.values();
+
+            this.render(diagram);
         }
 
-        OutOfBounds(tile: Tile): boolean {
-            return (tile.center.x <= 0 || tile.center.x >= SCREEN_WIDTH) || (tile.center.y <= 0 || tile.center.y >= SCREEN_HEIGHT)
+        render(diagram) {
+        var c = <HTMLCanvasElement>document.getElementById("myCanvas");
+        var ctx = c.getContext("2d");
+        //var ctx = this.canvas.getContext('2d');
+        // background
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        ctx.strokeStyle = '#888';
+        ctx.stroke();
+        // voronoi
+        if (!diagram) { return; }
+        // edges
+        ctx.beginPath();
+        ctx.strokeStyle = '#000';
+        var edges = diagram.edges,
+            iEdge = edges.length,
+            edge, v;
+        while (iEdge--) {
+            edge = edges[iEdge];
+            v = edge.va;
+            ctx.moveTo(v.x, v.y);
+            v = edge.vb;
+            ctx.lineTo(v.x, v.y);
+        }
+        ctx.stroke();
+
+        }
+        OutOfBounds(pt: Point): boolean {
+            return (pt.x <= 0 || pt.x >= SCREEN_WIDTH) || (pt.y <= 0 || pt.y >= SCREEN_HEIGHT)
         }
 
         GenerateIslands() {
@@ -235,7 +283,7 @@
             return points;
         }
 
-        function generateHexNeighborCenters(pt: IPoint) {
+        export function generateHexNeighborCenters(pt: IPoint) {
             var r = TILE_LENGTH;
             var valY = Math.floor(r * Math.sin(Math.PI / 3));
             var valX = Math.floor(r * Math.cos(Math.PI / 3) + r);
@@ -254,3 +302,6 @@
 
 }
  
+var world2 = new Test2.World();
+//world.GenerateMap(Test.HexTile.generationFunction, Test.HexTile.generateHexPoints);
+world2.InitializeMap(Test2.HexTile.generateHexNeighborCenters);
