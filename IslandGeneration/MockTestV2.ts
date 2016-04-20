@@ -10,8 +10,8 @@ var voronoi = new Voronoi();
 
 module Test2 {
     class Edge {
-        corner1: Point;
-        corner2: Point; //polygon instead of pts - also corners
+        corner1: Corner;
+        corner2: Corner; //polygon instead of pts - also corners
 
         tile1: Tile;
         tile2: Tile;
@@ -39,7 +39,6 @@ module Test2 {
             this.edges = new Array<Edge>();
 
             this.center = center;
-
         }
 
         public setType(tileType: TileType) {
@@ -56,9 +55,10 @@ module Test2 {
         edges: Array<Edge>;
         point: Point;
 
-        constructor() {
+        constructor(pt: Point) {
             this.corners = new Array<Corner>();
             this.edges = new Array<Edge>();
+            this.point = pt;
         }
 
         public toString() {
@@ -91,6 +91,7 @@ module Test2 {
         InitializeMap(generatePointFunction: (point: Point) => Array<Point>) {
             var pointDictionary = new collections.Dictionary<string, Point>();
             var tileDictionary = new collections.Dictionary<number, Tile>();
+            var cornerDictionary = new collections.Dictionary<string, Corner>();
 
             var queue = new collections.Queue<Point>();
             queue.enqueue(this.initialLocation);
@@ -130,78 +131,112 @@ module Test2 {
                     var edge = halfEdge.edge;
 
                     var newEdge = new Edge();
-                    newEdge.corner1 = edge.va;
-                    newEdge.corner2 = edge.vb;
 
-                    //Neighbors - looks wrong.
-                    var neighbor1 = edge.lSite;
-                    var neighbor2 = edge.rSite;
+                    var newCornerPts = []
+                    newCornerPts[0] = { x: halfEdge.getStartpoint().x, y: halfEdge.getStartpoint().y };
+                    newCornerPts[1] = { x: halfEdge.getEndpoint().x, y: halfEdge.getEndpoint().y };
 
-                    var newNeighbor = neighbor1;
+                    for (var i = 0; i < newCornerPts.length; i++) {
+                        var newCornerPt = newCornerPts[i];
+                        var getCorner = cornerDictionary.getValue(newCornerPt.x + "," + newCornerPt.y);
 
-                    if (newNeighbor.voronoiId == cell.site.voronoiId) {
-                        newNeighbor = neighbor2;
-                    }
-
-                    if (newNeighbor != null) {
-                        var getNeighbor = tileDictionary.getValue(newNeighbor.voronoiId);
-
-                        if (typeof getNeighbor !== 'undefined') {
-                            newTile.neighbors.push(getNeighbor);
+                        if (typeof getCorner === 'undefined') {
+                            var newCorner = new Corner(newCornerPt);
+                            cornerDictionary.setValue(newCornerPt.x + "," + newCornerPt.y, newCorner);
+                            newCorner.edges.push(newEdge);
                         } else {
-                            var center = <Point>{ x: newNeighbor.x, y: newNeighbor.y };
-                            getNeighbor = new Tile(center);
-                            tileDictionary.setValue(newNeighbor.voronoiId, getNeighbor);
-                            newTile.neighbors.push(getNeighbor);
+                            //Get the dictionary's value.
+                            newCorner = getCorner;
                         }
-                        newEdge.tile1 = getNeighbor;
 
-                    } else {
-                        alert("TEST");
+                        newCorner.edges.push(newEdge);
+
+                        if (i === 0) {
+                            newEdge.corner1 = newCorner;
+                        } else{
+                            newEdge.corner2 = newCorner;
+                            newTile.corners.push(newCorner);
+
+                        }
                     }
 
+                    //var neighbor1 = edge.lSite;
+                    //var neighbor2 = edge.rSite;
+
+                    //var newNeighbor = neighbor1;
+
+                    //if (newNeighbor.voronoiId == cell.site.voronoiId) {
+                    //    newNeighbor = neighbor2;
+                    //}
+
+                    //if (newNeighbor != null) {
+                    //    var getNeighbor = tileDictionary.getValue(newNeighbor.voronoiId);
+
+                    //    if (typeof getNeighbor !== 'undefined') {
+                    //        //newTile.neighbors.push(getNeighbor);
+                    //    } else {
+                    //        var center = <Point>{ x: newNeighbor.x, y: newNeighbor.y };
+                    //        getNeighbor = new Tile(center);
+                    //        tileDictionary.setValue(newNeighbor.voronoiId, getNeighbor);
+                    //        //newTile.neighbors.push(getNeighbor);
+                    //    }
+                    //    newEdge.tile1 = getNeighbor;
+
+                    //} 
 
                     newEdge.tile2 = newTile;
 
                     newTile.edges.push(newEdge);
                 });
+                cell.getNeighborIds().forEach(n => {
+                    var getNeighbor = tileDictionary.getValue(n);
+                    if (typeof getNeighbor !== 'undefined') {
+                        newTile.neighbors.push(getNeighbor);
+                    } else {
+                        var center = <Point>{ x: cells[n].site.x, y: cells[n].site.y };
+                        getNeighbor = new Tile(center);
+                        tileDictionary.setValue(n, getNeighbor);
+                        newTile.neighbors.push(getNeighbor);
+                    }
+
+                    //newTile.neighbors.push(n);
+                });
                 tileDictionary.setValue(cell.site.voronoiId, newTile);
             });
 
-            this.tiles = tileDictionary.values();
-
-            this.render(diagram);
+            this.tiles = tileDictionary.values();            
         }
 
-        render(diagram) {
-        var c = <HTMLCanvasElement>document.getElementById("myCanvas");
-        var ctx = c.getContext("2d");
-        //var ctx = this.canvas.getContext('2d');
-        // background
-        ctx.globalAlpha = 1;
-        ctx.beginPath();
-        ctx.fillStyle = 'white';
-        ctx.fill();
-        ctx.strokeStyle = '#888';
-        ctx.stroke();
-        // voronoi
-        if (!diagram) { return; }
-        // edges
-        ctx.beginPath();
-        ctx.strokeStyle = '#000';
-        var edges = diagram.edges,
-            iEdge = edges.length,
-            edge, v;
-        while (iEdge--) {
-            edge = edges[iEdge];
-            v = edge.va;
-            ctx.moveTo(v.x, v.y);
-            v = edge.vb;
-            ctx.lineTo(v.x, v.y);
-        }
-        ctx.stroke();
+        render() {
+            var c = <HTMLCanvasElement>document.getElementById("myCanvas");
+            var ctx = c.getContext("2d");
+
+            this.tiles.forEach(tile => {
+                ctx.beginPath();
+
+                ctx.moveTo(tile.corners[0].point.x, tile.corners[0].point.y);
+                for (var i = 1; i < tile.corners.length; i++) {
+                    ctx.lineTo(tile.corners[i].point.x, tile.corners[i].point.y);
+                }
+
+                ctx.lineTo(tile.corners[0].point.x, tile.corners[0].point.y);
+
+                ctx.strokeStyle = '#888';
+                ctx.stroke();
+                ctx.closePath();
+                ctx.restore();
+                if (tile.tileType === TileType.Land) {
+                    ctx.fillStyle = "#2DA82F";
+                } else if (tile.tileType === TileType.Water) {
+                    ctx.fillStyle = "#2D69A8";
+                } else if (tile.tileType == TileType.Shore) {
+                    ctx.fillStyle = "#FFFFFF";
+                }
+                ctx.fill();
+            });
 
         }
+
         OutOfBounds(pt: Point): boolean {
             return (pt.x <= 0 || pt.x >= SCREEN_WIDTH) || (pt.y <= 0 || pt.y >= SCREEN_HEIGHT)
         }
@@ -209,18 +244,23 @@ module Test2 {
         GenerateIslands() {
             var ran = Math.random();
             this.tiles.forEach(tile => {
-                if (this.isLand(tile, ran)) {
+                if (this.isLand(tile, ran) && tile.neighbors.length == 6) {
                     tile.setType(TileType.Land);
                     this.landTiles.push(tile);
+                    
                 } else {
                     tile.setType(TileType.Water);
                 }
-
-                //Edge tile.
-                if (tile.neighbors.length < 6) {
-                    tile.setType(TileType.Water);
-                }
+                
             });
+            this.landTiles.forEach(tile => {
+                tile.neighbors.forEach(n => {
+                    if (n.tileType == TileType.Water) {
+                        tile.setType(TileType.Shore);
+                    }
+                });
+            });
+            this.render();
 
         }
 
@@ -305,3 +345,4 @@ module Test2 {
 var world2 = new Test2.World();
 //world.GenerateMap(Test.HexTile.generationFunction, Test.HexTile.generateHexPoints);
 world2.InitializeMap(Test2.HexTile.generateHexNeighborCenters);
+world2.GenerateIslands();
