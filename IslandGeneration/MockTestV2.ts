@@ -120,7 +120,7 @@ module Test2 {
 
             cells.forEach(cell => {
 
-                var newTile = tileDictionary.getValue(cell.voronoiId);
+                var newTile = tileDictionary.getValue(cell.site.voronoiId);
                 if (typeof newTile === 'undefined') {
                     var center = <Point>{ x: cell.site.x, y: cell.site.y };
                     newTile = new Tile(center); //Create tile from cell
@@ -160,31 +160,11 @@ module Test2 {
                         }
                     }
 
-                    //var neighbor1 = edge.lSite;
-                    //var neighbor2 = edge.rSite;
-
-                    //var newNeighbor = neighbor1;
-
-                    //if (newNeighbor.voronoiId == cell.site.voronoiId) {
-                    //    newNeighbor = neighbor2;
-                    //}
-
-                    //if (newNeighbor != null) {
-                    //    var getNeighbor = tileDictionary.getValue(newNeighbor.voronoiId);
-
-                    //    if (typeof getNeighbor !== 'undefined') {
-                    //        //newTile.neighbors.push(getNeighbor);
-                    //    } else {
-                    //        var center = <Point>{ x: newNeighbor.x, y: newNeighbor.y };
-                    //        getNeighbor = new Tile(center);
-                    //        tileDictionary.setValue(newNeighbor.voronoiId, getNeighbor);
-                    //        //newTile.neighbors.push(getNeighbor);
-                    //    }
-                    //    newEdge.tile1 = getNeighbor;
-
-                    //} 
-
-                    newEdge.tile2 = newTile;
+                    if (typeof newEdge.tile1 !== 'undefined') {
+                        newEdge.tile2 = newTile;
+                    } else {
+                        newEdge.tile1 = newTile;
+                    }
 
                     newTile.edges.push(newEdge);
                 });
@@ -198,7 +178,7 @@ module Test2 {
                         tileDictionary.setValue(n, getNeighbor);
                         newTile.neighbors.push(getNeighbor);
                     }
-
+                    
                     //newTile.neighbors.push(n);
                 });
                 tileDictionary.setValue(cell.site.voronoiId, newTile);
@@ -257,9 +237,30 @@ module Test2 {
                 tile.neighbors.forEach(n => {
                     if (n.tileType == TileType.Water) {
                         tile.setType(TileType.Shore);
+                        this.shoreTiles.push(tile);
                     }
                 });
             });
+
+            var startEdge:Edge;
+            this.shoreTiles[0].edges.forEach(e => {
+                if (e.tile2.tileType === TileType.Water || e.tile1.tileType === TileType.Water) {
+                    startEdge = e;
+                }
+            });
+
+            var nextEdge:Edge = startEdge;
+            do {
+                var nextEdges = nextEdge.corner2.edges;
+                nextEdges.forEach(e => {
+                    if (e.tile1.tileType === TileType.Shore && e.tile2.tileType === TileType.Water ||
+                        e.tile2.tileType === TileType.Shore && e.tile1.tileType === TileType.Water) {
+                        //do something..
+                        nextEdge = e;
+                    }
+                });
+            } while (nextEdge !== startEdge);
+
             this.render();
 
         }
