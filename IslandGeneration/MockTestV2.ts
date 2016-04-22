@@ -203,35 +203,6 @@ module Test2 {
             this.tiles = tileDictionary.values();            
         }
 
-        render() {
-            var c = <HTMLCanvasElement>document.getElementById("myCanvas");
-            var ctx = c.getContext("2d");
-
-            this.tiles.forEach(tile => {
-                ctx.beginPath();
-
-                ctx.moveTo(tile.corners[0].point.x, tile.corners[0].point.y);
-                for (var i = 1; i < tile.corners.length; i++) {
-                    ctx.lineTo(tile.corners[i].point.x, tile.corners[i].point.y);
-                }
-
-                ctx.lineTo(tile.corners[0].point.x, tile.corners[0].point.y);
-
-                ctx.strokeStyle = '#888';
-                ctx.stroke();
-                ctx.closePath();
-                ctx.restore();
-                if (tile.tileType === TileType.Land) {
-                    ctx.fillStyle = "#2DA82F";
-                } else if (tile.tileType === TileType.Water) {
-                    ctx.fillStyle = "#2D69A8";
-                } else if (tile.tileType == TileType.Shore) {
-                    ctx.fillStyle = "#FFFFFF";
-                }
-                ctx.fill();
-            });
-
-        }
 
         OutOfBounds(pt: Point): boolean {
             return (pt.x <= 0 || pt.x >= SCREEN_WIDTH) || (pt.y <= 0 || pt.y >= SCREEN_HEIGHT)
@@ -256,12 +227,13 @@ module Test2 {
                     if (n.tileType == TileType.Water) {
                         tile.setType(TileType.Shore);
                         shoreDictionary.setValue(tile.voronoiId, tile);
-                        //this.shoreTiles.push(tile);
                     }
                 });
             });
 
+            var islandShapes = new Array<Array<Edge>>();
             while (!shoreDictionary.isEmpty()) {
+                this.shoreLine = new Array<Edge>();
 
                 var startEdge: Edge;
                 shoreDictionary.values()[0].edges.forEach(e => {
@@ -273,20 +245,10 @@ module Test2 {
                 shoreDictionary.remove(shoreDictionary.values()[0].voronoiId);
 
                 var nextEdge: Edge = startEdge;
-                var c = <HTMLCanvasElement>document.getElementById("myCanvas");
-                var ctx = c.getContext("2d");
-
                 var nextCorner = nextEdge.corner2;
 
                 do {
-                    ctx.beginPath();
-                    ctx.moveTo(nextEdge.corner1.point.x, nextEdge.corner1.point.y);
-                    ctx.lineTo(nextEdge.corner2.point.x, nextEdge.corner2.point.y);
 
-                    ctx.strokeStyle = '#ff0000';
-                    ctx.stroke();
-                    ctx.closePath();
-                    ctx.restore();
 
                     this.shoreLine.push(nextEdge);
                     var nextEdges = nextCorner.edges;
@@ -310,15 +272,66 @@ module Test2 {
                     });
 
                     if (typeof possibleEdge != 'undefined') {
-                        if (!possibleEdge.corner2.equals(nextEdge.corner2) && !possibleEdge.corner2.equals(nextEdge.corner1)) {
+                        if (!possibleEdge.corner2.equals(nextEdge.corner2) &&
+                            !possibleEdge.corner2.equals(nextEdge.corner1)) {
                             nextCorner = possibleEdge.corner2;
                         } else {
-                            nextCorner = possibleEdge.corner1;
+                            var temp = possibleEdge.corner1;
+                            possibleEdge.corner1 = possibleEdge.corner2;
+                            possibleEdge.corner2 = temp;
+                            nextCorner = possibleEdge.corner2;
                         }
                         nextEdge = possibleEdge;
                     }
 
-                } while (!nextEdge.corner2.equals(startEdge.corner1));
+
+                } while (!nextEdge.corner1.equals(startEdge.corner1));
+
+                islandShapes.push(this.shoreLine);
+
+            }
+            this.drawIsland(islandShapes);
+        }
+
+        drawIsland(islandShapes) {
+            var c = <HTMLCanvasElement>document.getElementById("myCanvas");
+            var ctx = c.getContext("2d");
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+            ctx.fill();
+
+            islandShapes.forEach(shapeArray => {
+                ctx.beginPath();
+                ctx.moveTo(shapeArray[0].corner1.point.x, shapeArray[0].corner1.point.y);
+                var p = ctx.getImageData(shapeArray[0].corner1.point.x, shapeArray[0].corner1.point.y, 1, 1).data;
+
+                shapeArray.forEach(line => {
+                    ctx.lineTo(line.corner2.point.x, line.corner2.point.y);
+                });
+
+                //Lakes will always be drawn after its island.
+                var hex = "#" + ("000000" + rgbToHex(p[0], p[1], p[2])).slice(-6);
+                if (hex == '#000000') {
+                    //Is a lake.
+                    ctx.fillStyle = '#ffffff';
+
+                } else {
+                    //Is in island.
+                    ctx.fillStyle = '#000000';
+                }
+
+                ctx.strokeStyle = '#ff0000';
+                ctx.stroke();
+                ctx.closePath();
+
+                ctx.fill();
+                ctx.restore();
+
+            });
+            function rgbToHex(r, g, b) {
+                if (r > 255 || g > 255 || b > 255)
+                    throw "Invalid color component";
+                return ((r << 16) | (g << 8) | b).toString(16);
             }
         }
 
