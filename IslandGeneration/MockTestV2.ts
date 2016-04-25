@@ -306,9 +306,26 @@ module Test2 {
                 var p = ctx.getImageData(shapeArray[0].corner1.point.x, shapeArray[0].corner1.point.y, 1, 1).data;
 
                 shapeArray.forEach(line => {
-                    ctx.lineTo(line.corner2.point.x, line.corner2.point.y);
-                });
+                    //ctx.lineTo(line.corner2.point.x, line.corner2.point.y);
+                    //this.subDivideLines(ctx,line);
+                    //var ptArray = new Array<Point>();
+                    //this.generateNoisyLineHelper(2, line.corner1.point, line.corner2.point, ptArray);
 
+                    //ptArray.forEach(p => {
+                    //    ctx.lineTo(p.x, p.y);
+                    //});
+                    //ctx.lineTo(line.corner2.point.x, line.corner2.point.y);
+                    //Subdivide the lines.
+                });
+                var pts = new Array<number>();
+                for (var i = 0; i < shapeArray.length; i+=5) {
+                    //if (i == shapeArray.length - 1) {
+                        //ctx.lineTo(shapeArray[i].corner2.point.x, shapeArray[i].corner2.point.y);
+                        pts.push(shapeArray[i].corner2.point.x);
+                        pts.push(shapeArray[i].corner2.point.y);
+                    //}
+                }
+                ctx.curve(pts, 1, true);
                 //Lakes will always be drawn after its island.
                 var hex = "#" + ("000000" + rgbToHex(p[0], p[1], p[2])).slice(-6);
                 if (hex == '#000000') {
@@ -333,6 +350,42 @@ module Test2 {
                     throw "Invalid color component";
                 return ((r << 16) | (g << 8) | b).toString(16);
             }
+        }
+
+        subDivideLines(ctx, edge: Edge) {
+            var pt1 = edge.corner1.point;
+            var pt2 = edge.corner2.point;
+
+            var r1 = 2 * Math.random() - 4;
+            var r2 = 2 * Math.random() - 4;
+
+            var n = 4;
+
+            var midX = (pt1.x + pt2.x) / 2  + r1;
+            var midY = (pt1.y + pt2.y) / 2 + r1;
+
+            ctx.lineTo(midX, midY);
+            ctx.lineTo(pt2.x, pt2.y);
+        }
+
+        generateNoisyLineHelper(depth, pt1: Point, pt2: Point, ptArray): Array<Point> {
+
+            if (depth == 0) return ptArray;
+            var r1 = 2 * Math.random() - 4;
+            var r2 = 2 * Math.random() - 4;
+
+            var n = 4;
+
+            var midX = (pt1.x + pt2.x) / 2 + r1;
+            var midY = (pt1.y + pt2.y) / 2 + r1;
+
+            var midPt = { x:midX, y:midY }
+
+            ptArray.push(midPt);
+
+            this.generateNoisyLineHelper(depth - 1, pt1, midPt, ptArray);
+            this.generateNoisyLineHelper(depth - 1, midPt, pt2, ptArray);
+
         }
 
         isLand(tile: Tile, ranZ): boolean {

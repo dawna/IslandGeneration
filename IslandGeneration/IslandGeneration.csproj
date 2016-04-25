@@ -19,6 +19,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="index.html" />
+    <Content Include="Scripts\curve.min.js" />
+    <Content Include="Scripts\curve_calc.min.js" />
+    <Content Include="Scripts\curve_func.min.js" />
     <Content Include="Scripts\rhill-voronoi-core.js" />
     <Content Include="Scripts\rhill-voronoi-core.min.js" />
     <Content Include="web.config" />
