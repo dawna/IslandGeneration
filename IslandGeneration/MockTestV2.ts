@@ -283,19 +283,29 @@ module Test2 {
                     var possibleEdge;
                     nextEdges.forEach(e => {
 
-                        if (e.tile1.tileType === TileType.Shore && e.tile2.tileType === TileType.Water ||
-                            e.tile2.tileType === TileType.Shore && e.tile1.tileType === TileType.Water) {
-                            if (e.tile1.tileType === TileType.Shore) {
-                                shoreDictionary.remove(e.tile1.voronoiId);
-                            } else if (e.tile2.tileType === TileType.Shore) {
-                                shoreDictionary.remove(e.tile2.voronoiId);
-                            }
-                            //do something..
-                            if (!(e.corner2.equals(nextEdge.corner2) && e.corner1.equals(nextEdge.corner1)) &&
-                                !(e.corner2.equals(nextEdge.corner1) && e.corner1.equals(nextEdge.corner2))) {
-                                possibleEdge = e;
+                        if (typeof e.tile1 !== 'undefined' && typeof e.tile2 !== 'undefined') {
+                            if (e.tile1.tileType === TileType.Shore && e.tile2.tileType === TileType.Water ||
+                                e.tile2.tileType === TileType.Shore && e.tile1.tileType === TileType.Water) {
+                                if (e.tile1.tileType === TileType.Shore) {
+                                    shoreDictionary.remove(e.tile1.voronoiId);
+                                } else if (e.tile2.tileType === TileType.Shore) {
+                                    shoreDictionary.remove(e.tile2.voronoiId);
+                                }
+                                //do something..
+                                if (!(e.corner2.equals(nextEdge.corner2) && e.corner1.equals(nextEdge.corner1)) &&
+                                    !(e.corner2.equals(nextEdge.corner1) && e.corner1.equals(nextEdge.corner2))) {
+                                    possibleEdge = e;
+                                }
                             }
                         }
+                        //else {
+                        //    if (typeof e.tile1 !== 'undefined') {
+                        //        shoreDictionary.remove(e.tile1.voronoiId);
+                        //    } else if (typeof e.tile2 !== 'undefined') {
+                        //        shoreDictionary.remove(e.tile2.voronoiId);
+                        //    }
+                        //    possibleEdge = e
+                        //}
                     });
 
                     if (typeof possibleEdge != 'undefined') {
@@ -323,7 +333,7 @@ module Test2 {
         drawIsland(islandShapes) {
             var c = <HTMLCanvasElement>document.getElementById("myCanvas");
             var ctx = c.getContext("2d");
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = '#66c2ff';
             ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
             ctx.fill();
 
@@ -352,27 +362,37 @@ module Test2 {
                         pts.push(shapeArray[i].corner2.point.y);
                     //}
                 }
-
+                pts.push(shapeArray[0].corner1.point.x);
+                pts.push(shapeArray[0].corner1.point.y);
                 ctx.curve(pts, 1, true);
                 //Lakes will always be drawn after its island.
                 var hex = "#" + ("000000" + rgbToHex(p[0], p[1], p[2])).slice(-6);
-                if (hex == '#000000') {
+                if (hex == '#66ff66') {
                     //Is a lake.
-                    ctx.fillStyle = '#ffffff';
+                    ctx.fillStyle = '#66c2ff';
 
                 } else {
                     //Is in island.
-                    ctx.fillStyle = '#000000';
+                    ctx.fillStyle = '#66ff66';
                 }
 
-                ctx.strokeStyle = '#ff0000';
-                ctx.stroke();
                 ctx.closePath();
 
                 ctx.fill();
                 ctx.restore();
 
             });
+
+            //this.tiles.forEach(t => {
+            //    t.edges.forEach(e => {
+            //        ctx.strokeStyle = '#000000';
+            //        ctx.moveTo(e.corner1.point.x, e.corner1.point.y);
+            //        ctx.lineTo(e.corner2.point.x, e.corner2.point.y);
+            //        ctx.stroke();
+            //        ctx.restore();
+            //    });
+            //});
+
             function rgbToHex(r, g, b) {
                 if (r > 255 || g > 255 || b > 255)
                     throw "Invalid color component";
@@ -433,10 +453,11 @@ module Test2 {
             var xEdgeDist = Math.abs(SCREEN_WIDTH - this.initialLocation.x);
             var yEdgeDist = Math.abs(SCREEN_HEIGHT - this.initialLocation.y);
 
-            var radius = 500;
-
+            var radius = 1000;
+            var b = .4;
+            if (length > radius) b = .6;
             var edgeLength = Math.sqrt(xEdgeDist * xEdgeDist + yEdgeDist * yEdgeDist);
-            return (c - (length / SCREEN_WIDTH) * length / SCREEN_WIDTH - .4) > 0;
+            return (c - (length / SCREEN_WIDTH) * length / SCREEN_WIDTH - b) > 0;
         }
     }
 
