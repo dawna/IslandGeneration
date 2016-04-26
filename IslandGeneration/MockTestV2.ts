@@ -101,21 +101,32 @@ module Test2 {
             var queue = new collections.Queue<Point>();
             queue.enqueue(this.initialLocation);
 
-            while (queue.size() !== 0) {
-                var pt = queue.dequeue();
+            //while (queue.size() !== 0) {
+            //    var pt = queue.dequeue();
 
-                var pts = generatePointFunction(pt);
+            //    var pts = generatePointFunction(pt);
 
-                pts.forEach(p => {
-                    var getPt = pointDictionary.getValue(p.x + "," + p.y);
+            //    pts.forEach(p => {
+            //        var getPt = pointDictionary.getValue(p.x + "," + p.y);
 
-                    if (typeof getPt === 'undefined') {
-                        if (!this.OutOfBounds(p)) {
-                            pointDictionary.setValue(p.x + "," + p.y, p);
-                            queue.enqueue(p);
-                        }
-                    }
-                });
+            //        if (typeof getPt === 'undefined') {
+            //            if (!this.OutOfBounds(p)) {
+            //                pointDictionary.setValue(p.x + "," + p.y, p);
+            //                queue.enqueue(p);
+            //            }
+            //        }
+            //    });
+            //}
+
+            //Attempt to do voronoi generation
+            for (var i = 0; i < 10000; i++) {
+                var newX = Math.random() * SCREEN_WIDTH;
+                var newY = Math.random() * SCREEN_HEIGHT;
+                var getPt = pointDictionary.getValue(newX + "," + newY);
+                var p = { x: newX, y: newY };
+                if (typeof getPt === 'undefined') {
+                    pointDictionary.setValue(p.x + "," + p.y, p);
+                }
             }
 
             var sites = pointDictionary.values();
@@ -211,7 +222,7 @@ module Test2 {
         GenerateIslands() {
             var ran = Math.random();
             this.tiles.forEach(tile => {
-                if (this.isLand(tile, ran) && tile.neighbors.length == 6) {
+                if (this.isLand(tile, ran)) {
                     tile.setType(TileType.Land);
                     this.landTiles.push(tile);
                     
@@ -223,12 +234,29 @@ module Test2 {
 
             var shoreDictionary = new collections.Dictionary<number, Tile>();
             this.landTiles.forEach(tile => {
-                tile.neighbors.forEach(n => {
-                    if (n.tileType == TileType.Water) {
-                        tile.setType(TileType.Shore);
-                        shoreDictionary.setValue(tile.voronoiId, tile);
+                var add = true;
+                tile.edges.forEach(e => {
+                    if (typeof e.tile1 === 'undefined' || typeof e.tile2 === 'undefined') {
+                        tile.setType(TileType.Water);
+                        add = false;
+                        return;
                     }
                 });
+
+                var neighborIsWater = false;
+                if (add) {
+                    tile.neighbors.forEach(n => {
+                        if (n.tileType == TileType.Water) {
+                            neighborIsWater = true;
+                            return;
+                        }
+                    });
+                }
+
+                if (neighborIsWater && add) {
+                    tile.setType(TileType.Shore);
+                    shoreDictionary.setValue(tile.voronoiId, tile);
+                }
             });
 
             var islandShapes = new Array<Array<Edge>>();
@@ -248,7 +276,6 @@ module Test2 {
                 var nextCorner = nextEdge.corner2;
 
                 do {
-
 
                     this.shoreLine.push(nextEdge);
                     var nextEdges = nextCorner.edges;
@@ -305,7 +332,7 @@ module Test2 {
                 ctx.moveTo(shapeArray[0].corner1.point.x, shapeArray[0].corner1.point.y);
                 var p = ctx.getImageData(shapeArray[0].corner1.point.x, shapeArray[0].corner1.point.y, 1, 1).data;
 
-                shapeArray.forEach(line => {
+                //shapeArray.forEach(line => {
                     //ctx.lineTo(line.corner2.point.x, line.corner2.point.y);
                     //this.subDivideLines(ctx,line);
                     //var ptArray = new Array<Point>();
@@ -316,15 +343,16 @@ module Test2 {
                     //});
                     //ctx.lineTo(line.corner2.point.x, line.corner2.point.y);
                     //Subdivide the lines.
-                });
+                //});
                 var pts = new Array<number>();
-                for (var i = 0; i < shapeArray.length; i+=5) {
+                for (var i = 0; i < shapeArray.length; i+=4) {
                     //if (i == shapeArray.length - 1) {
                         //ctx.lineTo(shapeArray[i].corner2.point.x, shapeArray[i].corner2.point.y);
                         pts.push(shapeArray[i].corner2.point.x);
                         pts.push(shapeArray[i].corner2.point.y);
                     //}
                 }
+
                 ctx.curve(pts, 1, true);
                 //Lakes will always be drawn after its island.
                 var hex = "#" + ("000000" + rgbToHex(p[0], p[1], p[2])).slice(-6);
