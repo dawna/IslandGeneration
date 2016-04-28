@@ -355,7 +355,11 @@ module Test2 {
                     //Subdivide the lines.
                 //});
                 var pts = new Array<number>();
-                for (var i = 0; i < shapeArray.length; i+=4) {
+                var inc = 1;
+                if (shapeArray.length > 10) {
+                    inc = 4;
+                }
+                for (var i = 0; i < shapeArray.length; i+=inc) {
                     //if (i == shapeArray.length - 1) {
                         //ctx.lineTo(shapeArray[i].corner2.point.x, shapeArray[i].corner2.point.y);
                         pts.push(shapeArray[i].corner2.point.x);
@@ -379,20 +383,23 @@ module Test2 {
                 ctx.closePath();
 
                 ctx.fill();
-                ctx.restore();
+                
 
             });
 
             //this.tiles.forEach(t => {
             //    t.edges.forEach(e => {
             //        ctx.strokeStyle = '#000000';
+            //        ctx.beginPath();
+
             //        ctx.moveTo(e.corner1.point.x, e.corner1.point.y);
             //        ctx.lineTo(e.corner2.point.x, e.corner2.point.y);
+            //        ctx.closePath();
             //        ctx.stroke();
-            //        ctx.restore();
+            //        //ctx.restore();
             //    });
             //});
-
+            ctx.restore();
             function rgbToHex(r, g, b) {
                 if (r > 255 || g > 255 || b > 255)
                     throw "Invalid color component";
