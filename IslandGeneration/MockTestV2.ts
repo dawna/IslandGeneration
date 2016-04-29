@@ -101,23 +101,6 @@ module Test2 {
             var queue = new collections.Queue<Point>();
             queue.enqueue(this.initialLocation);
 
-            //while (queue.size() !== 0) {
-            //    var pt = queue.dequeue();
-
-            //    var pts = generatePointFunction(pt);
-
-            //    pts.forEach(p => {
-            //        var getPt = pointDictionary.getValue(p.x + "," + p.y);
-
-            //        if (typeof getPt === 'undefined') {
-            //            if (!this.OutOfBounds(p)) {
-            //                pointDictionary.setValue(p.x + "," + p.y, p);
-            //                queue.enqueue(p);
-            //            }
-            //        }
-            //    });
-            //}
-
             //Attempt to do voronoi generation
             for (var i = 0; i < 10000; i++) {
                 var newX = Math.random() * SCREEN_WIDTH;
@@ -298,14 +281,6 @@ module Test2 {
                                 }
                             }
                         }
-                        //else {
-                        //    if (typeof e.tile1 !== 'undefined') {
-                        //        shoreDictionary.remove(e.tile1.voronoiId);
-                        //    } else if (typeof e.tile2 !== 'undefined') {
-                        //        shoreDictionary.remove(e.tile2.voronoiId);
-                        //    }
-                        //    possibleEdge = e
-                        //}
                     });
 
                     if (typeof possibleEdge != 'undefined') {
@@ -337,44 +312,33 @@ module Test2 {
             ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
             ctx.fill();
 
+            var lakes = new Array<Array<Edge>>();
             islandShapes.forEach(shapeArray => {
                 ctx.beginPath();
                 ctx.moveTo(shapeArray[0].corner1.point.x, shapeArray[0].corner1.point.y);
                 var p = ctx.getImageData(shapeArray[0].corner1.point.x, shapeArray[0].corner1.point.y, 1, 1).data;
 
-                //shapeArray.forEach(line => {
-                    //ctx.lineTo(line.corner2.point.x, line.corner2.point.y);
-                    //this.subDivideLines(ctx,line);
-                    //var ptArray = new Array<Point>();
-                    //this.generateNoisyLineHelper(2, line.corner1.point, line.corner2.point, ptArray);
-
-                    //ptArray.forEach(p => {
-                    //    ctx.lineTo(p.x, p.y);
-                    //});
-                    //ctx.lineTo(line.corner2.point.x, line.corner2.point.y);
-                    //Subdivide the lines.
-                //});
                 var pts = new Array<number>();
                 var inc = 1;
                 if (shapeArray.length > 10) {
                     inc = 4;
                 }
+
                 for (var i = 0; i < shapeArray.length; i+=inc) {
-                    //if (i == shapeArray.length - 1) {
-                        //ctx.lineTo(shapeArray[i].corner2.point.x, shapeArray[i].corner2.point.y);
-                        pts.push(shapeArray[i].corner2.point.x);
-                        pts.push(shapeArray[i].corner2.point.y);
-                    //}
+                    pts.push(shapeArray[i].corner2.point.x);
+                    pts.push(shapeArray[i].corner2.point.y);
                 }
+
                 pts.push(shapeArray[0].corner1.point.x);
                 pts.push(shapeArray[0].corner1.point.y);
                 ctx.curve(pts, 1, true);
+
                 //Lakes will always be drawn after its island.
                 var hex = "#" + ("000000" + rgbToHex(p[0], p[1], p[2])).slice(-6);
                 if (hex == '#66ff66') {
+                    lakes.push(shapeArray); //Push the lake.
                     //Is a lake.
                     ctx.fillStyle = '#66c2ff';
-
                 } else {
                     //Is in island.
                     ctx.fillStyle = '#66ff66';
@@ -387,18 +351,27 @@ module Test2 {
 
             });
 
-            //this.tiles.forEach(t => {
-            //    t.edges.forEach(e => {
-            //        ctx.strokeStyle = '#000000';
-            //        ctx.beginPath();
+            var ranZ = Math.random();
+            var perlinGenerator = new Perlin();
+            var mountains = new Array<Tree>();
+            this.landTiles.forEach(t => {
+                if (t.tileType === TileType.Land) {
+                    var xScale = t.center.x / SCREEN_WIDTH;
+                    var yScale = t.center.y / SCREEN_HEIGHT;
 
-            //        ctx.moveTo(e.corner1.point.x, e.corner1.point.y);
-            //        ctx.lineTo(e.corner2.point.x, e.corner2.point.y);
-            //        ctx.closePath();
-            //        ctx.stroke();
-            //        //ctx.restore();
-            //    });
-            //});
+                    var c = perlinGenerator.OctavePerlin(xScale, yScale, ranZ, 3, 3)
+                    if (c > .55) {
+                        var tree = new Tree(t.center, 40, 30);
+                        mountains.push(tree);
+
+                    }
+                }
+            });
+
+            mountains.forEach(m => {
+                m.Draw(ctx);
+            });
+
             ctx.restore();
             function rgbToHex(r, g, b) {
                 if (r > 255 || g > 255 || b > 255)
@@ -509,6 +482,30 @@ module Test2 {
         }
     }
 
+    class Tree {
+        center: Point;
+        width: number;
+        height: number;
+
+        constructor(center, width, height) {
+            this.center = center;
+            this.width = width;
+            this.height = height;
+        }
+
+        Draw(ctx) {
+            ctx.beginPath();
+            ctx.moveTo(this.center.x - this.width / 2, this.center.y);
+            ctx.lineTo(this.center.x + this.width / 2, this.center.y);
+            ctx.lineTo(this.center.x, this.center.y - this.height);
+            ctx.lineTo(this.center.x - this.width / 2, this.center.y);
+            ctx.closePath();
+
+            ctx.fillStyle = '#000000'
+            ctx.fill();
+
+        }
+    }
 }
  
 var world2 = new Test2.World();
