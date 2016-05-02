@@ -77,6 +77,128 @@ module Test2 {
 
     }
 
+    class Island {
+        edges: Array<Edge>;
+        lakes: Array<Lake>;
+        vertices: Array<Point>;
+
+        constructor() {
+            this.edges = new Array<Edge>();
+            this.lakes = new Array<Lake>();
+            this.vertices = new Array<Point>();
+        }
+
+        Draw(ctx) {
+
+            ctx.beginPath();
+            ctx.moveTo(this.edges[0].corner1.point.x, this.edges[0].corner1.point.y);
+
+            var pts = new Array<number>();
+            var inc = 1;
+            if (this.edges.length > 10) {
+                inc = 4;
+            }
+
+
+            for (var i = 0; i < this.edges.length; i += inc) {
+                pts.push(this.edges[i].corner2.point.x);
+                pts.push(this.edges[i].corner2.point.y);
+            }
+
+            ctx.curve(pts, 1, true);
+
+            ctx.fillStyle = '#66ff66';
+            ctx.fill();
+            ctx.closePath();
+
+            this.lakes.forEach(lake => {
+                lake.Draw(ctx);
+            });
+        }
+    }
+
+    class Lake {
+        edges: Array<Edge>;
+        vertices: Array<Point>;
+
+        constructor() {
+            this.edges = new Array<Edge>();
+            this.vertices = new Array<Point>();
+        }
+
+        Draw(ctx) {
+            ctx.beginPath();
+            ctx.moveTo(this.edges[0].corner1.point.x, this.edges[0].corner1.point.y);
+
+            var pts = new Array<number>();
+            var inc = 1;
+            if (this.edges.length > 10) {
+                inc = 4;
+            }
+
+
+            for (var i = 0; i < this.edges.length; i += inc) {
+                pts.push(this.edges[i].corner2.point.x);
+                pts.push(this.edges[i].corner2.point.y);
+            }
+
+            ctx.curve(pts, 1, true);
+
+            ctx.fillStyle = '#66c2ff';
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
+
+    class Mountain {
+        center: Point;
+        width: number;
+        height: number;
+
+        constructor(center, width, height) {
+            this.center = center;
+            this.width = width;
+            this.height = height;
+        }
+
+        Draw(ctx) {
+            ctx.beginPath();
+            ctx.moveTo(this.center.x - this.width / 2, this.center.y);
+            ctx.lineTo(this.center.x + this.width / 2, this.center.y);
+            ctx.lineTo(this.center.x, this.center.y - this.height);
+            ctx.lineTo(this.center.x - this.width / 2, this.center.y);
+            ctx.closePath();
+
+            ctx.fillStyle = '#000000'
+            ctx.fill();
+
+        }
+    }
+
+    class Tree {
+        center: Point;
+        width: number;
+        height: number;
+
+        constructor(center, width, height) {
+            this.center = center;
+            this.width = width;
+            this.height = height;
+        }
+
+        Draw(ctx) {
+            ctx.beginPath();
+            ctx.moveTo(this.center.x - this.width / 2, this.center.y);
+            ctx.lineTo(this.center.x + this.width / 2, this.center.y);
+            ctx.lineTo(this.center.x, this.center.y - this.height);
+            ctx.lineTo(this.center.x - this.width / 2, this.center.y);
+            ctx.closePath();
+
+            ctx.fillStyle = '#000000'
+            ctx.fill();
+
+        }
+    }
 
     export class World {
         tiles: Array<Tile>;
@@ -196,12 +318,8 @@ module Test2 {
 
             this.tiles = tileDictionary.values();            
         }
-
-
-        OutOfBounds(pt: Point): boolean {
-            return (pt.x <= 0 || pt.x >= SCREEN_WIDTH) || (pt.y <= 0 || pt.y >= SCREEN_HEIGHT)
-        }
-        
+       
+        //Where all of the island generation code happens.
         GenerateIslands() {
             var ran = Math.random();
             this.tiles.forEach(tile => {
@@ -242,9 +360,13 @@ module Test2 {
                 }
             });
 
-            var islandShapes = new Array<Array<Edge>>();
+            //Actually creates the different islands.
+            //var islandShapes = new Array<Array<Edge>>();
+            var islandShapes = new Array<Island>();
+            //Needed since we have to go through multiple islands/lakes.
             while (!shoreDictionary.isEmpty()) {
-                this.shoreLine = new Array<Edge>();
+                var shoreLine = new Array<Edge>();
+                var islandPoints = new Array<Point>();
 
                 var startEdge: Edge;
                 shoreDictionary.values()[0].edges.forEach(e => {
@@ -257,13 +379,16 @@ module Test2 {
 
                 var nextEdge: Edge = startEdge;
                 var nextCorner = nextEdge.corner2;
-
+                
+                //To keep track of each of the points that fall on the coast-line.
+                islandPoints.push(nextEdge.corner2.point);
+                //Each individual island or circuit.
                 do {
+                    shoreLine.push(nextEdge);
 
-                    this.shoreLine.push(nextEdge);
                     var nextEdges = nextCorner.edges;
-
                     var possibleEdge;
+
                     nextEdges.forEach(e => {
 
                         if (typeof e.tile1 !== 'undefined' && typeof e.tile2 !== 'undefined') {
@@ -296,88 +421,121 @@ module Test2 {
                         nextEdge = possibleEdge;
                     }
 
+                    islandPoints.push(nextEdge.corner1.point);
 
                 } while (!nextEdge.corner1.equals(startEdge.corner1));
 
-                islandShapes.push(this.shoreLine);
+                var isLake = false;
+                islandShapes.forEach(island => {
+                    if (this.isInPolygon(island.vertices, island.vertices.length, islandPoints[0])) {
+                        isLake = true; 
 
+                        var lake = new Lake();
+                        lake.edges = shoreLine;
+                        lake.vertices = islandPoints;
+                        island.lakes.push(lake);
+                        return;
+                    }
+                });
+
+                if (!isLake) {
+                    var newIsland = new Island();
+                    newIsland.edges = shoreLine;
+                    newIsland.vertices = islandPoints;
+                    islandShapes.push(newIsland);
+                }
             }
+
             this.drawIsland(islandShapes);
         }
 
-        drawIsland(islandShapes) {
+        isInPolygon(polygon: Array<Point>, N: number, p: Point) : boolean
+        {
+            var counter = 0;
+            var i;
+            var xinters;
+            var p1, p2;
+
+            p1 = polygon[0];
+            for (i = 1; i <= N; i++) {
+                p2 = polygon[i % N];
+                if (p.y > Math.min(p1.y, p2.y)) {
+                    if (p.y <= Math.max(p1.y, p2.y)) {
+                        if (p.x <= Math.max(p1.x, p2.x)) {
+                            if (p1.y != p2.y) {
+                                xinters = (p.y - p1.y) * (p2.x - p1.x) / (p2.y - p1.y) + p1.x;
+                                if (p1.x == p2.x || p.x <= xinters)
+                                    counter++;
+                            }
+                        }
+                    }
+                }
+                p1 = p2;
+            }
+
+            if (counter % 2 == 0)
+                return (false);
+            else
+                return (true);
+        }
+
+        //This needs be refactored.
+        drawIsland(islandShapes : Array<Island>) {
             var c = <HTMLCanvasElement>document.getElementById("myCanvas");
             var ctx = c.getContext("2d");
             ctx.fillStyle = '#66c2ff';
             ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
             ctx.fill();
 
-            var lakes = new Array<Array<Edge>>();
-            islandShapes.forEach(shapeArray => {
-                ctx.beginPath();
-                ctx.moveTo(shapeArray[0].corner1.point.x, shapeArray[0].corner1.point.y);
-                var p = ctx.getImageData(shapeArray[0].corner1.point.x, shapeArray[0].corner1.point.y, 1, 1).data;
+            islandShapes.forEach(island =>
+            {
+                island.Draw(ctx);
 
-                var pts = new Array<number>();
-                var inc = 1;
-                if (shapeArray.length > 10) {
-                    inc = 4;
+                var pts = new Array<Point>();
+                island.lakes.forEach(lake => {
+                    for (var i = 0; i < lake.vertices.length; i++) {
+                        pts.push(lake.vertices[i]);
+                    }
+                });
+                for (var i = 0; i < island.vertices.length; i++) {
+                    pts.push(island.vertices[i]);
                 }
 
-                for (var i = 0; i < shapeArray.length; i+=inc) {
-                    pts.push(shapeArray[i].corner2.point.x);
-                    pts.push(shapeArray[i].corner2.point.y);
+                for (var i = 0; i < 5; i++) {
+
+                    var randomLandTile = this.landTiles[Math.floor(Math.random() * this.landTiles.length)];
+                    pts.push(randomLandTile.center);
                 }
-
-                pts.push(shapeArray[0].corner1.point.x);
-                pts.push(shapeArray[0].corner1.point.y);
-                ctx.curve(pts, 1, true);
-
-                //Lakes will always be drawn after its island.
-                var hex = "#" + ("000000" + rgbToHex(p[0], p[1], p[2])).slice(-6);
-                if (hex == '#66ff66') {
-                    lakes.push(shapeArray); //Push the lake.
-                    //Is a lake.
-                    ctx.fillStyle = '#66c2ff';
-                } else {
-                    //Is in island.
-                    ctx.fillStyle = '#66ff66';
-                }
-
-                ctx.closePath();
-
-                ctx.fill();
-                
-
+                var bbox = { xl: 0, xr: SCREEN_WIDTH, yt: 0, yb: SCREEN_HEIGHT }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
+                var diagram = voronoi.compute(pts, bbox);
             });
 
             var ranZ = Math.random();
             var perlinGenerator = new Perlin();
-            var mountains = new Array<Tree>();
+            var trees = new Array<Tree>();
+
             this.landTiles.forEach(t => {
                 if (t.tileType === TileType.Land) {
                     var xScale = t.center.x / SCREEN_WIDTH;
                     var yScale = t.center.y / SCREEN_HEIGHT;
 
-                    var c = perlinGenerator.OctavePerlin(xScale, yScale, ranZ, 3, 3)
-                    if (c > .55) {
+                    var c = perlinGenerator.OctavePerlin(xScale, yScale, ranZ, 4, 4)
+                    if (c > .54) {
                         var tree = new Tree(t.center, 40, 30);
-                        mountains.push(tree);
+                        trees.push(tree);
 
                     }
                 }
             });
 
-            mountains.forEach(m => {
-                m.Draw(ctx);
+
+
+            trees.forEach(t => {
+                t.Draw(ctx);
             });
 
             ctx.restore();
-            function rgbToHex(r, g, b) {
-                if (r > 255 || g > 255 || b > 255)
-                    throw "Invalid color component";
-                return ((r << 16) | (g << 8) | b).toString(16);
-            }
+
         }
 
         subDivideLines(ctx, edge: Edge) {
@@ -482,30 +640,7 @@ module Test2 {
         }
     }
 
-    class Tree {
-        center: Point;
-        width: number;
-        height: number;
 
-        constructor(center, width, height) {
-            this.center = center;
-            this.width = width;
-            this.height = height;
-        }
-
-        Draw(ctx) {
-            ctx.beginPath();
-            ctx.moveTo(this.center.x - this.width / 2, this.center.y);
-            ctx.lineTo(this.center.x + this.width / 2, this.center.y);
-            ctx.lineTo(this.center.x, this.center.y - this.height);
-            ctx.lineTo(this.center.x - this.width / 2, this.center.y);
-            ctx.closePath();
-
-            ctx.fillStyle = '#000000'
-            ctx.fill();
-
-        }
-    }
 }
  
 var world2 = new Test2.World();
