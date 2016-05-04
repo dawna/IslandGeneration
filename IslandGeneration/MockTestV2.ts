@@ -81,6 +81,7 @@ module Test2 {
         edges: Array<Edge>;
         lakes: Array<Lake>;
         vertices: Array<Point>;
+        mountains: Array<Mountain>;
 
         constructor() {
             this.edges = new Array<Edge>();
@@ -106,13 +107,17 @@ module Test2 {
             }
 
             ctx.curve(pts, 1, true);
-
+            ctx.closePath();
             ctx.fillStyle = '#66ff66';
             ctx.fill();
-            ctx.closePath();
+            
 
             this.lakes.forEach(lake => {
                 lake.Draw(ctx);
+            });
+
+            this.mountains.forEach(mountain => {
+                mountain.Draw(ctx);
             });
         }
     }
@@ -155,23 +160,23 @@ module Test2 {
         width: number;
         height: number;
 
-        constructor(center, width, height) {
+        constructor(center) {
             this.center = center;
-            this.width = width;
-            this.height = height;
+            this.width = 50;
+            this.height = 150;
         }
 
         Draw(ctx) {
-            ctx.beginPath();
-            ctx.moveTo(this.center.x - this.width / 2, this.center.y);
-            ctx.lineTo(this.center.x + this.width / 2, this.center.y);
-            ctx.lineTo(this.center.x, this.center.y - this.height);
-            ctx.lineTo(this.center.x - this.width / 2, this.center.y);
-            ctx.closePath();
 
-            ctx.fillStyle = '#000000'
-            ctx.fill();
+            //ctx.beginPath();
+            //ctx.moveTo(this.center.x - this.width / 2, this.center.y);
+            //ctx.lineTo(this.center.x + this.width / 2, this.center.y);
+            //ctx.lineTo(this.center.x, this.center.y - this.height);
+            //ctx.lineTo(this.center.x - this.width / 2, this.center.y);
+            //ctx.closePath();
 
+            //ctx.fillStyle = '#000000'
+            //ctx.fill();
         }
     }
 
@@ -425,6 +430,7 @@ module Test2 {
 
                 } while (!nextEdge.corner1.equals(startEdge.corner1));
 
+                //Lake generation.
                 var isLake = false;
                 islandShapes.forEach(island => {
                     if (this.isInPolygon(island.vertices, island.vertices.length, islandPoints[0])) {
@@ -438,12 +444,54 @@ module Test2 {
                     }
                 });
 
+
                 if (!isLake) {
+                    //Mountain generation.
+                    //Get list of all edge points.
+
+                    //5 is the number of regions that will be added.
+                    var voronoiSites = new Array<Point>();
+                    islandPoints.forEach(pt => {
+                        voronoiSites.push(pt);
+                    });
+
+                    var mountainPts = new Array<Point>();
+                    for (var i = 0; i < 5; i++) {
+                        var randomTile = this.landTiles[Math.floor(Math.random() * this.landTiles.length) - 1];
+                        var pt = randomTile.center;
+                        //Contains all of the points including the ones along the coast.
+                        voronoiSites.push(pt);
+                        //Contains only points for potential mountains.
+                        mountainPts.push(pt);
+                    }
+
+                    //Gets the new sites.
+                    var bbox = { xl: 0, xr: SCREEN_WIDTH, yt: 0, yb: SCREEN_HEIGHT }; 
+                    var diagram = voronoi.compute(voronoiSites, bbox);
+                    var cells: Array<any> = diagram.cells;
+
+                    var mountains = new Array<Mountain>();
+                    cells.forEach(cell => {
+                        var x = cell.site.x;
+                        var y = cell.site.y;
+
+                        mountainPts.forEach(pt => {
+                            if (pt.x == x && pt.y == y) {
+                                var newMountain = new Mountain(cell.site);
+                                mountains.push(newMountain);
+                                return;
+                            }
+                        });
+                    });
+                
                     var newIsland = new Island();
                     newIsland.edges = shoreLine;
                     newIsland.vertices = islandPoints;
+                    newIsland.mountains = mountains;
                     islandShapes.push(newIsland);
                 }
+
+                //Forest generation.
             }
 
             this.drawIsland(islandShapes);
@@ -497,17 +545,7 @@ module Test2 {
                         pts.push(lake.vertices[i]);
                     }
                 });
-                for (var i = 0; i < island.vertices.length; i++) {
-                    pts.push(island.vertices[i]);
-                }
 
-                for (var i = 0; i < 5; i++) {
-
-                    var randomLandTile = this.landTiles[Math.floor(Math.random() * this.landTiles.length)];
-                    pts.push(randomLandTile.center);
-                }
-                var bbox = { xl: 0, xr: SCREEN_WIDTH, yt: 0, yb: SCREEN_HEIGHT }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
-                var diagram = voronoi.compute(pts, bbox);
             });
 
             var ranZ = Math.random();
@@ -527,8 +565,6 @@ module Test2 {
                     }
                 }
             });
-
-
 
             trees.forEach(t => {
                 t.Draw(ctx);
