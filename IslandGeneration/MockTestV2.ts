@@ -29,6 +29,7 @@ module Test2 {
     class Tile {
         neighbors: Array<Tile>;
         corners: Array<Corner>;
+
         edges: Array<Edge>;
         center: Point;
         tileType: TileType;
@@ -108,9 +109,10 @@ module Test2 {
 
             ctx.curve(pts, 1, true);
             ctx.closePath();
-            ctx.fillStyle = '#66ff66';
+            ctx.fillStyle = '#F7DC88';
             ctx.fill();
-            
+            ctx.lineWidth = 12;
+            ctx.stroke();
 
             this.lakes.forEach(lake => {
                 lake.Draw(ctx);
@@ -149,9 +151,11 @@ module Test2 {
 
             ctx.curve(pts, 1, true);
 
-            ctx.fillStyle = '#66c2ff';
+            ctx.fillStyle = '#FAEAB9';
             ctx.fill();
             ctx.closePath();
+            ctx.lineWidth = 12;
+            ctx.stroke();
         }
     }
 
@@ -162,21 +166,21 @@ module Test2 {
 
         constructor(center) {
             this.center = center;
-            this.width = 50;
-            this.height = 150;
+            this.width = 200;
+            this.height = 250;
         }
 
         Draw(ctx) {
 
-            //ctx.beginPath();
-            //ctx.moveTo(this.center.x - this.width / 2, this.center.y);
-            //ctx.lineTo(this.center.x + this.width / 2, this.center.y);
-            //ctx.lineTo(this.center.x, this.center.y - this.height);
-            //ctx.lineTo(this.center.x - this.width / 2, this.center.y);
-            //ctx.closePath();
+            ctx.beginPath();
+            ctx.moveTo(this.center.x - this.width / 2, this.center.y);
+            ctx.lineTo(this.center.x + this.width / 2, this.center.y);
+            ctx.lineTo(this.center.x, this.center.y - this.height);
+            ctx.lineTo(this.center.x - this.width / 2, this.center.y);
+            ctx.closePath();
 
-            //ctx.fillStyle = '#000000'
-            //ctx.fill();
+            ctx.fillStyle = '#000000'
+            ctx.fill();
         }
     }
 
@@ -326,6 +330,9 @@ module Test2 {
        
         //Where all of the island generation code happens.
         GenerateIslands() {
+
+            var shoreDictionary = new collections.Dictionary<number, Tile>();
+
             var ran = Math.random();
             this.tiles.forEach(tile => {
                 if (this.isLand(tile, ran)) {
@@ -338,7 +345,6 @@ module Test2 {
                 
             });
 
-            var shoreDictionary = new collections.Dictionary<number, Tile>();
             this.landTiles.forEach(tile => {
                 var add = true;
                 tile.edges.forEach(e => {
@@ -466,23 +472,27 @@ module Test2 {
                     }
 
                     //Gets the new sites.
-                    var bbox = { xl: 0, xr: SCREEN_WIDTH, yt: 0, yb: SCREEN_HEIGHT }; 
-                    var diagram = voronoi.compute(voronoiSites, bbox);
-                    var cells: Array<any> = diagram.cells;
+                    //var bbox = { xl: 0, xr: SCREEN_WIDTH, yt: 0, yb: SCREEN_HEIGHT }; 
+                    //var diagram = voronoi.compute(voronoiSites, bbox);
+                    //var cells: Array<any> = diagram.cells;
+
+                    //var mountains = new Array<Mountain>();
+                    //cells.forEach(cell => {
+                    //    var x = cell.site.x;
+                    //    var y = cell.site.y;
+
+                    //    mountainPts.forEach(pt => {
+                    //        if (pt.x == x && pt.y == y) {
+                    //            var newMountain = new Mountain(cell.site);
+                    //            mountains.push(newMountain);
+                    //            return;
+                    //        }
+                    //    });
+                    //});
 
                     var mountains = new Array<Mountain>();
-                    cells.forEach(cell => {
-                        var x = cell.site.x;
-                        var y = cell.site.y;
-
-                        mountainPts.forEach(pt => {
-                            if (pt.x == x && pt.y == y) {
-                                var newMountain = new Mountain(cell.site);
-                                mountains.push(newMountain);
-                                return;
-                            }
-                        });
-                    });
+                    var mountain = new Mountain(this.initialLocation);
+                    mountains.push(mountain);
                 
                     var newIsland = new Island();
                     newIsland.edges = shoreLine;
@@ -531,7 +541,7 @@ module Test2 {
         drawIsland(islandShapes : Array<Island>) {
             var c = <HTMLCanvasElement>document.getElementById("myCanvas");
             var ctx = c.getContext("2d");
-            ctx.fillStyle = '#66c2ff';
+            ctx.fillStyle = '#FAEAB9';
             ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
             ctx.fill();
 
@@ -611,6 +621,28 @@ module Test2 {
         }
 
         isLand(tile: Tile, ranZ): boolean {
+            //var xPoint = tile.center.x;
+            //var yPoint = tile.center.y;
+
+            //var perlinGenerator = new Perlin();
+            //var xScale = xPoint / SCREEN_WIDTH;
+            //var yScale = yPoint / SCREEN_HEIGHT;
+
+            //var c = perlinGenerator.OctavePerlin(xScale, yScale, ranZ, 4, 4)
+
+            //var xDist = Math.abs(xPoint - this.initialLocation.x);
+            //var yDist = Math.abs(yPoint - this.initialLocation.y);
+            //var length = Math.sqrt(xDist * xDist + yDist * yDist);
+
+            //var xEdgeDist = Math.abs(SCREEN_WIDTH - this.initialLocation.x);
+            //var yEdgeDist = Math.abs(SCREEN_HEIGHT - this.initialLocation.y);
+
+            //var radius = 1000;
+            //var b = .4;
+            //if (length > radius) b = .6;
+            //var edgeLength = Math.sqrt(xEdgeDist * xEdgeDist + yEdgeDist * yEdgeDist);
+            //return (c - (length / SCREEN_WIDTH) * length / SCREEN_WIDTH - b) > 0;
+
             var xPoint = tile.center.x;
             var yPoint = tile.center.y;
 
@@ -624,14 +656,12 @@ module Test2 {
             var yDist = Math.abs(yPoint - this.initialLocation.y);
             var length = Math.sqrt(xDist * xDist + yDist * yDist);
 
-            var xEdgeDist = Math.abs(SCREEN_WIDTH - this.initialLocation.x);
-            var yEdgeDist = Math.abs(SCREEN_HEIGHT - this.initialLocation.y);
+            var radius = 1500;
+            var b = .2;
+            //if (length > radius) b = .2;
+            if (length < 100) return true;
 
-            var radius = 1000;
-            var b = .4;
-            if (length > radius) b = .6;
-            var edgeLength = Math.sqrt(xEdgeDist * xEdgeDist + yEdgeDist * yEdgeDist);
-            return (c - (length / SCREEN_WIDTH) * length / SCREEN_WIDTH - b) > 0;
+            return (c - (length / radius) * (length / radius)) - b > 0;
         }
     }
 
